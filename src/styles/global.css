@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-civ-primary: var(--civ-primary, #475569);
+  --color-civ-secondary: var(--civ-secondary, #cbd5e1);
+  --color-civ-primary-hover: var(--civ-primary-hover, #334155);
+}
+
+@layer base {
+  :root {
+    --civ-primary: #475569; /* Default slate-600 */
+    --civ-secondary: #cbd5e1; /* Default slate-300 */
+    --civ-primary-hover: #334155; /* Default slate-700 */
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}

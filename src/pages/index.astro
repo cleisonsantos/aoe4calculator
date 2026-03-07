@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Calculator } from '../components/Calculator';
+---
+
+<Layout title="AoE4 Dynamic Calculator">
+  <main class="min-h-screen bg-slate-50">
+    <Calculator client:load />
+  </main>
+</Layout>
