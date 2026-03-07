@@ -8,6 +8,7 @@ import { TechSelector } from './TechSelector';
 import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
 import { ModeToggle } from './ModeToggle';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Calculator = () => {
   const { loadFromUrl, mode } = useCalculatorStore();
@@ -74,6 +75,7 @@ export const Calculator = () => {
           <p className="text-slate-500 mt-1 text-sm font-medium">Dynamic Production & Timing Engine</p>
         </div>
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <ThemeToggle />
           <ModeToggle />
           <AgeSelector />
         </div>

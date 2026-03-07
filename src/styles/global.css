@@ -11,9 +11,154 @@
     --civ-primary: #475569; /* Default slate-600 */
     --civ-secondary: #cbd5e1; /* Default slate-300 */
     --civ-primary-hover: #334155; /* Default slate-700 */
+    --app-bg: #f8fafc;
+    --app-bg-soft: #f1f5f9;
+    --app-bg-muted: #e2e8f0;
+    --app-surface: rgba(255, 255, 255, 0.92);
+    --app-border-soft: #e2e8f0;
+    --app-border: #cbd5e1;
+    --app-border-strong: #94a3b8;
+    --app-text: #0f172a;
+    --app-text-muted: #334155;
+    --app-text-soft: #64748b;
+    --app-text-faint: #94a3b8;
+    --app-shadow: 0 24px 50px -32px rgba(15, 23, 42, 0.35);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
+    --app-bg: #020817;
+    --app-bg-soft: #0f172a;
+    --app-bg-muted: #1e293b;
+    --app-surface: rgba(15, 23, 42, 0.92);
+    --app-border-soft: #253244;
+    --app-border: #334155;
+    --app-border-strong: #475569;
+    --app-text: #e2e8f0;
+    --app-text-muted: #cbd5e1;
+    --app-text-soft: #94a3b8;
+    --app-text-faint: #64748b;
+    --app-shadow: 0 30px 60px -36px rgba(2, 6, 23, 0.95);
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top, rgba(148, 163, 184, 0.16), transparent 28%),
+      var(--app-bg);
+    color: var(--app-text);
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      border-color 180ms ease;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    color: inherit;
+  }
+
+  html[data-theme='dark'] body {
+    background:
+      radial-gradient(circle at top, rgba(59, 130, 246, 0.14), transparent 30%),
+      var(--app-bg);
+  }
+}
+
+@layer utilities {
+  html[data-theme='dark'] .bg-white {
+    background-color: var(--app-surface) !important;
+  }
+
+  html[data-theme='dark'] .bg-slate-50 {
+    background-color: var(--app-bg-soft) !important;
+  }
+
+  html[data-theme='dark'] .bg-slate-100 {
+    background-color: var(--app-bg-muted) !important;
+  }
+
+  html[data-theme='dark'] .bg-slate-300 {
+    background-color: var(--app-border) !important;
+  }
+
+  html[data-theme='dark'] .border-slate-50 {
+    border-color: var(--app-border-soft) !important;
+  }
+
+  html[data-theme='dark'] .border-slate-100 {
+    border-color: var(--app-border-soft) !important;
+  }
+
+  html[data-theme='dark'] .border-slate-200 {
+    border-color: var(--app-border) !important;
+  }
+
+  html[data-theme='dark'] .border-slate-300 {
+    border-color: var(--app-border-strong) !important;
+  }
+
+  html[data-theme='dark'] .text-slate-400 {
+    color: var(--app-text-faint) !important;
+  }
+
+  html[data-theme='dark'] .text-slate-500 {
+    color: var(--app-text-soft) !important;
+  }
+
+  html[data-theme='dark'] .text-slate-600 {
+    color: var(--app-text-soft) !important;
+  }
+
+  html[data-theme='dark'] .text-slate-700 {
+    color: var(--app-text-muted) !important;
+  }
+
+  html[data-theme='dark'] .text-slate-800 {
+    color: var(--app-text-muted) !important;
+  }
+
+  html[data-theme='dark'] .text-slate-900 {
+    color: var(--app-text) !important;
+  }
+
+  html[data-theme='dark'] .border-t-slate-800 {
+    border-top-color: var(--app-text) !important;
+  }
+
+  html[data-theme='dark'] .shadow-sm,
+  html[data-theme='dark'] .shadow-md {
+    box-shadow: var(--app-shadow) !important;
+  }
+
+  html[data-theme='dark'] .hover\:bg-slate-50:hover {
+    background-color: var(--app-bg-soft) !important;
+  }
+
+  html[data-theme='dark'] .hover\:bg-slate-100:hover {
+    background-color: var(--app-bg-soft) !important;
+  }
+
+  html[data-theme='dark'] .hover\:bg-slate-200:hover {
+    background-color: var(--app-border-soft) !important;
+  }
+
+  html[data-theme='dark'] .hover\:border-slate-300:hover {
+    border-color: var(--app-border-strong) !important;
+  }
+
+  html[data-theme='dark'] .hover\:text-slate-800:hover {
+    color: var(--app-text) !important;
+  }
+
+  html[data-theme='dark'] .group:hover .group-hover\:text-slate-600 {
+    color: var(--app-text-muted) !important;
   }
 }
