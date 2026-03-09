@@ -30,7 +30,8 @@ interface CalculatorState {
   ovooCount: number; // For Mongols/Golden Horde
   ovooDoubleProduction: boolean; // For Mongols/Golden Horde
   sacredSites: number;
-  
+  tcProducingVillagers: number; // Number of Town Centers producing villagers
+
   // Actions
   setMode: (mode: CalculatorMode) => void;
   setCiv: (civ: string) => void;
@@ -40,6 +41,7 @@ interface CalculatorState {
   setUnitProduction: (id: string, buildings: number) => void;
   setOvoo: (count: number, double: boolean) => void;
   setSacredSites: (count: number) => void;
+  setTcProducingVillagers: (count: number) => void;
   loadFromUrl: (query: string) => void;
 }
 
@@ -66,13 +68,14 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   ovooCount: 0,
   ovooDoubleProduction: false,
   sacredSites: 0,
+  tcProducingVillagers: 0,
 
   setMode: (mode) => set({ mode }),
   setCiv: (civ) => set({ civ, activeTechs: [], units: [], sacredSites: 0, ovooCount: 0, ovooDoubleProduction: false }), // Reset on civ change
   setAge: (age) => set({ age }),
-  setVillagers: (type, count) => 
+  setVillagers: (type, count) =>
     set((state) => ({ villagers: { ...state.villagers, [type]: count } })),
-  toggleTech: (techId) => 
+  toggleTech: (techId) =>
     set((state) => ({
       activeTechs: state.activeTechs.includes(techId)
         ? state.activeTechs.filter((id) => id !== techId)
@@ -92,6 +95,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
     }),
   setOvoo: (count, double) => set({ ovooCount: count, ovooDoubleProduction: double }),
   setSacredSites: (count) => set({ sacredSites: count }),
+  setTcProducingVillagers: (count) => set({ tcProducingVillagers: count }),
   
   loadFromUrl: (query: string) => {
     try {
@@ -109,10 +113,11 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
       const ovooCount = parseInt(params.get('oc') || '0', 10);
       const ovooDoubleProduction = params.get('od') === 'true';
       const sacredSites = parseInt(params.get('ss') || '0', 10);
+      const tcProducingVillagers = parseInt(params.get('tc') || '0', 10);
 
       const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
 
-      set({ mode, civ, age, villagers, activeTechs: techs, ovooCount, ovooDoubleProduction, sacredSites });
+      set({ mode, civ, age, villagers, activeTechs: techs, ovooCount, ovooDoubleProduction, sacredSites, tcProducingVillagers });
     } catch (e) {
       console.error("Failed to parse URL params", e);
     }

@@ -312,3 +312,56 @@ export const calculateRequiredVillagers = (
     total: foodVills + woodVills + goldVills + stoneVills,
   };
 };
+
+// ── Villager Production Analysis ──
+
+export interface VillagerProductionAnalysis {
+  tcProducingVillagers: number;
+  villagerProductionRate: number; // villagers per minute
+  foodDrainFromVillagers: number; // food per minute consumed by villager production
+  canProduceSimultaneously: boolean;
+  foodSurplus: number; // positive = can sustain both, negative = conflict
+  maxTcForCurrentFood: number; // max TCs that can produce villagers with current food surplus
+}
+
+export const calculateVillagerProduction = (
+  rpm: ResourceSet,
+  tcProducingVillagers: number,
+  unitDrain: ResourceSet
+): VillagerProductionAnalysis => {
+  // Villager costs: 50 food, 25 seconds (base time)
+  const VILLAGER_FOOD_COST = 50;
+  const VILLAGER_TIME = 25;
+  
+  // Calculate villager production rate per TC (villagers per minute)
+  const villagersPerMinutePerTc = 60 / VILLAGER_TIME; // 2.4 vill/min per TC
+  
+  // Total villager production rate
+  const totalVillagerRate = tcProducingVillagers * villagersPerMinutePerTc;
+  
+  // Food drain from villager production
+  const foodDrainFromVillagers = totalVillagerRate * VILLAGER_FOOD_COST;
+  
+  // Calculate food surplus after unit production and villager production
+  const foodAvailable = rpm.food;
+  const foodUsedByUnits = unitDrain.food;
+  const foodSurplus = foodAvailable - foodUsedByUnits - foodDrainFromVillagers;
+  
+  // Can produce simultaneously if we have enough food for both
+  const canProduceSimultaneously = foodSurplus >= 0;
+  
+  // Calculate max TCs that can produce villagers with current food surplus
+  const foodAfterUnits = foodAvailable - foodUsedByUnits;
+  const maxTcForCurrentFood = foodAfterUnits > 0 
+    ? Math.floor(foodAfterUnits / (villagersPerMinutePerTc * VILLAGER_FOOD_COST))
+    : 0;
+  
+  return {
+    tcProducingVillagers,
+    villagerProductionRate: Math.round(totalVillagerRate * 10) / 10,
+    foodDrainFromVillagers: Math.round(foodDrainFromVillagers),
+    canProduceSimultaneously,
+    foodSurplus: Math.round(foodSurplus),
+    maxTcForCurrentFood,
+  };
+};
