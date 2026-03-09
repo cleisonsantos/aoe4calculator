@@ -68,7 +68,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   ovooCount: 0,
   ovooDoubleProduction: false,
   sacredSites: 0,
-  tcProducingVillagers: 0,
+  tcProducingVillagers: 1, // Default: 1 TC producing villagers (starting TC)
 
   setMode: (mode) => set({ mode }),
   setCiv: (civ) => set({ civ, activeTechs: [], units: [], sacredSites: 0, ovooCount: 0, ovooDoubleProduction: false }), // Reset on civ change
@@ -113,7 +113,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
       const ovooCount = parseInt(params.get('oc') || '0', 10);
       const ovooDoubleProduction = params.get('od') === 'true';
       const sacredSites = parseInt(params.get('ss') || '0', 10);
-      const tcProducingVillagers = parseInt(params.get('tc') || '0', 10);
+      const tcProducingVillagers = params.get('tc') ? parseInt(params.get('tc')!, 10) : 1; // Default to 1 if not specified
 
       const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
 
