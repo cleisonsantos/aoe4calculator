@@ -57,7 +57,7 @@ const defaultVillagers: VillagerAllocation = {
 };
 
 export const useCalculatorStore = create<CalculatorState>((set) => ({
-  mode: 'resource' as CalculatorMode,
+  mode: 'unit' as CalculatorMode,
   civ: 'en', // Default English
   age: 1,
   villagers: defaultVillagers,
@@ -110,7 +110,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
       const ovooDoubleProduction = params.get('od') === 'true';
       const sacredSites = parseInt(params.get('ss') || '0', 10);
 
-      const mode = (params.get('mode') === 'unit' ? 'unit' : 'resource') as CalculatorMode;
+      const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
 
       set({ mode, civ, age, villagers, activeTechs: techs, ovooCount, ovooDoubleProduction, sacredSites });
     } catch (e) {
