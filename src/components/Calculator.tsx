@@ -9,6 +9,7 @@ import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
 import { ModeToggle } from './ModeToggle';
 import { ThemeToggle } from './ThemeToggle';
+import { TownCenterSelector } from './TownCenterSelector';
 
 export const Calculator = () => {
   const { loadFromUrl, mode } = useCalculatorStore();
@@ -36,6 +37,7 @@ export const Calculator = () => {
       if (state.ovooCount > 0) params.set('oc', state.ovooCount.toString());
       if (state.ovooDoubleProduction) params.set('od', 'true');
       if (state.sacredSites > 0) params.set('ss', state.sacredSites.toString());
+      if (state.tcProducingVillagers > 0) params.set('tc', state.tcProducingVillagers.toString());
 
       if (state.units.length > 0) {
         const uParam = state.units.map(u => `${u.id}:${u.buildings}`).join(',');
@@ -100,6 +102,7 @@ export const Calculator = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <UnitSelector units={data.units} />
+            <TownCenterSelector />
             <PassiveGenerationSelector />
             <TechSelector techs={data.technologies} />
           </div>

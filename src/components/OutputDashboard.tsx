@@ -5,10 +5,11 @@ import {
   calculateProductionDrain,
   calculateMaxProduction,
   calculateRequiredVillagers,
+  calculateVillagerProduction,
 } from '../utils/calculator';
 import { CostDisplay } from './ResourceIcon';
 import { useAoE4Data } from '../hooks/useAoE4Data';
-import { Pickaxe, Swords, Users } from 'lucide-react';
+import { Pickaxe, Swords, Users, Home, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources';
 
@@ -105,7 +106,8 @@ const UnitsModeOutput = () => {
   const {
     civ, age, activeTechs,
     units: activeUnits,
-    ovooCount, ovooDoubleProduction, sacredSites
+    ovooCount, ovooDoubleProduction, sacredSites,
+    tcProducingVillagers, villagers
   } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
@@ -114,7 +116,11 @@ const UnitsModeOutput = () => {
     ovooDoubleProduction, ovooCount, sacredSites
   );
 
-  const { perUnit } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
+  const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
+  
+  // Calculate RPM for villager production analysis
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
+  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain);
 
   return (
     <>
@@ -196,6 +202,70 @@ const UnitsModeOutput = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Villager Production Analysis */}
+      {activeUnits.length > 0 && tcProducingVillagers > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <h3 className="text-lg font-bold mb-3 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
+            <Home className="w-5 h-5 text-[var(--civ-primary)]" />
+            Villager Production Analysis
+          </h3>
+          
+          <div className={`mb-4 p-4 rounded-lg border-2 ${
+            villagerAnalysis.canProduceSimultaneously 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-2">
+              {villagerAnalysis.canProduceSimultaneously ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              )}
+              <span className={`font-bold ${
+                villagerAnalysis.canProduceSimultaneously ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {villagerAnalysis.canProduceSimultaneously 
+                  ? 'Can Produce Both Simultaneously' 
+                  : 'Food Conflict - Not Enough for Both'}
+              </span>
+            </div>
+            <p className={`text-sm ${
+              villagerAnalysis.canProduceSimultaneously ? 'text-green-700' : 'text-red-700'
+            }`}>
+              {villagerAnalysis.canProduceSimultaneously 
+                ? `Your economy can sustain both unit production and ${villagerAnalysis.villagerProductionRate} villagers/min`
+                : `You need ${Math.abs(villagerAnalysis.foodSurplus)} more food/min to sustain both`
+              }
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-slate-50 rounded border border-slate-100">
+              <div className="text-xs text-slate-500 font-medium uppercase mb-1">Villager Production</div>
+              <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.villagerProductionRate} <span className="text-sm font-normal text-slate-500">/min</span></div>
+              <div className="text-xs text-slate-500 mt-1">from {tcProducingVillagers} TC</div>
+            </div>
+            <div className="p-3 bg-slate-50 rounded border border-slate-100">
+              <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Drain (Vills)</div>
+              <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.foodDrainFromVillagers} <span className="text-sm font-normal text-slate-500">/min</span></div>
+              <div className="text-xs text-slate-500 mt-1">50 food × 2.4 vill/min/TC</div>
+            </div>
+            <div className="p-3 bg-slate-50 rounded border border-slate-100">
+              <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Surplus</div>
+              <div className={`text-2xl font-bold ${villagerAnalysis.foodSurplus >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {villagerAnalysis.foodSurplus >= 0 ? '+' : ''}{villagerAnalysis.foodSurplus} <span className="text-sm font-normal text-slate-500">/min</span>
+              </div>
+              <div className="text-xs text-slate-500 mt-1">After units + villagers</div>
+            </div>
+            <div className="p-3 bg-slate-50 rounded border border-slate-100">
+              <div className="text-xs text-slate-500 font-medium uppercase mb-1">Max TCs Supported</div>
+              <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.maxTcForCurrentFood}</div>
+              <div className="text-xs text-slate-500 mt-1">with current food surplus</div>
+            </div>
           </div>
         </div>
       )}
