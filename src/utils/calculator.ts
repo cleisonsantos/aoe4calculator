@@ -72,7 +72,14 @@ export const getEffectiveRates = (
   const m = getResourceMultipliers(civ, age, activeTechs);
 
   // Use farms as default food source for reverse calculations
-  const foodRate = BASE_RATES.food_farms * m.food_mult;
+  let foodRate = BASE_RATES.food_farms * m.food_mult;
+  
+  // Apply civ-specific bonuses to the default food source (farms)
+  if (civ === 'en') {
+    const eng_farm_mult = age >= 4 ? 1.30 : age >= 3 ? 1.20 : 1.15;
+    foodRate *= eng_farm_mult;
+  }
+
   const woodRate = BASE_RATES.wood * m.wood_mult;
   const goldRate = BASE_RATES.gold * m.gold_mult;
   const stoneRate = BASE_RATES.stone * m.stone_mult;
@@ -170,7 +177,7 @@ export const calculateProductionDrain = (
   const perUnit: UnitDrain[] = [];
 
   activeUnits.forEach(au => {
-    const uDef = allUnits.find(u => u.id === au.id);
+    const uDef = allUnits.find(u => u.id === au.id && u.civs.includes(civ));
     if (!uDef) return;
 
     const time = uDef.costs.time;
@@ -280,12 +287,20 @@ export const calculateRequiredVillagers = (
   activeTechs: string[],
   ovooDoubleProduction: boolean,
   ovooCount?: number,
-  sacredSites?: number
+  sacredSites?: number,
+  tcProducingVillagers: number = 0
 ): RequiredVillagers => {
   const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
   const rates = getEffectiveRates(civ, age, activeTechs);
 
+  // Villager costs: 50 food, 25 seconds (base time)
+  const VILLAGER_FOOD_COST = 50;
+  const VILLAGER_TIME = 25;
+  const villagersPerMinutePerTc = 60 / VILLAGER_TIME;
+  const villagerFoodDrain = tcProducingVillagers * villagersPerMinutePerTc * VILLAGER_FOOD_COST;
+
   // Subtract passive generation before calculating villagers
+  let foodDrain = drain.food + villagerFoodDrain;
   let goldDrain = drain.gold;
   let stoneDrain = drain.stone;
 
@@ -299,7 +314,7 @@ export const calculateRequiredVillagers = (
     stoneDrain = Math.max(0, stoneDrain - ovooRate * ovooCount);
   }
 
-  const foodVills = rates.food > 0 ? Math.ceil(drain.food / rates.food) : 0;
+  const foodVills = rates.food > 0 ? Math.ceil(foodDrain / rates.food) : 0;
   const woodVills = rates.wood > 0 ? Math.ceil(drain.wood / rates.wood) : 0;
   const goldVills = rates.gold > 0 ? Math.ceil(goldDrain / rates.gold) : 0;
   const stoneVills = rates.stone > 0 ? Math.ceil(stoneDrain / rates.stone) : 0;

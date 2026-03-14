@@ -113,13 +113,24 @@ const UnitsModeOutput = () => {
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
-    ovooDoubleProduction, ovooCount, sacredSites
+    ovooDoubleProduction, ovooCount, sacredSites,
+    tcProducingVillagers
   );
 
   const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
   
-  // Calculate RPM for villager production analysis
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
+  // Calculate RPM for villager production analysis based on REQUIRED villagers in Units Mode
+  // this ensures the analysis shows if the REQUIRED economy is sufficient
+  const requiredVillagersAllocation = {
+    food_sheep: 0, food_berries: 0, food_deer: 0, food_boar: 0,
+    food_farms: required.food,
+    wood: required.wood,
+    gold: required.gold,
+    stone: required.stone,
+    oliveoil: 0,
+    silver: 0
+  };
+  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites);
   const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain);
 
   return (
@@ -177,7 +188,7 @@ const UnitsModeOutput = () => {
           </h3>
           <div className="space-y-3">
             {perUnit.map(pu => {
-              const uDef = allUnits.find(u => u.id === pu.unitId);
+              const uDef = allUnits.find(u => u.id === pu.unitId && u.civs.includes(civ));
               if (!uDef) return null;
               return (
                 <div key={pu.unitId} className="flex flex-col gap-1 text-sm border-b border-slate-50 pb-2 last:border-0">
