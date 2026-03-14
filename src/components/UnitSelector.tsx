@@ -69,7 +69,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
         <div className="space-y-4 pt-4 border-t border-slate-100">
           <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Active Production</h4>
           {activeUnits.map(au => {
-            const unitDef = units.find(u => u.id === au.id);
+            const unitDef = units.find(u => u.id === au.id && u.civs.includes(civ));
             if (!unitDef) return null;
 
             return (
