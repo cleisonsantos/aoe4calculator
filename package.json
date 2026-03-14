@@ -22,5 +22,9 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.0",
     "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
+    "wrangler": "^4.73.0"
   }
 }
