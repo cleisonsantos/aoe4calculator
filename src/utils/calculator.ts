@@ -2,6 +2,43 @@ import { type VillagerAllocation } from '../store/useCalculatorStore';
 import { type UnitData } from '../data/api';
 import { type ProductionUnit } from '../store/useCalculatorStore';
 
+// ── Villager Unit Helper ──
+
+export interface VillagerStats {
+  cost: number; // food cost
+  time: number; // training time in seconds
+}
+
+/**
+ * Retrieves villager stats (cost and training time) for a specific civilization.
+ * Falls back to defaults if villager unit is not found in the data.
+ * 
+ * The villager unit is identified by having "villager" in its classes array.
+ * Different civilizations may have different villager units (e.g., "gilded-villager" for Order of the Dragon).
+ */
+export const getVillagerStats = (
+  allUnits: UnitData[],
+  civ: string
+): VillagerStats => {
+  // Find the villager unit for this civilization
+  const villagerUnit = allUnits.find(
+    u => u.civs.includes(civ) && u.classes?.includes('villager')
+  );
+
+  if (villagerUnit) {
+    return {
+      cost: villagerUnit.costs.food || 50,
+      time: villagerUnit.costs.time || 20,
+    };
+  }
+
+  // Fallback to defaults if not found
+  return {
+    cost: 50,
+    time: 20,
+  };
+};
+
 export const BASE_RATES = {
   food_sheep: 40,
   food_berries: 40,
@@ -80,11 +117,21 @@ export const getEffectiveRates = (
     foodRate *= eng_farm_mult;
   }
 
-  const woodRate = BASE_RATES.wood * m.wood_mult;
-  const goldRate = BASE_RATES.gold * m.gold_mult;
-  const stoneRate = BASE_RATES.stone * m.stone_mult;
-  const oliveoilRate = BASE_RATES.oliveoil * m.oliveoil_mult;
-  const silverRate = BASE_RATES.silver * m.silver_mult;
+  let woodRate = BASE_RATES.wood * m.wood_mult;
+  let goldRate = BASE_RATES.gold * m.gold_mult;
+  let stoneRate = BASE_RATES.stone * m.stone_mult;
+  let oliveoilRate = BASE_RATES.oliveoil * m.oliveoil_mult;
+  let silverRate = BASE_RATES.silver * m.silver_mult;
+
+  // Order of the Dragon: Gilded Villagers gather resources 28% quicker
+  if (civ === 'od') {
+    foodRate *= 1.28;
+    woodRate *= 1.28;
+    goldRate *= 1.28;
+    stoneRate *= 1.28;
+    oliveoilRate *= 1.28;
+    silverRate *= 1.28;
+  }
 
   return { food: foodRate, wood: woodRate, gold: goldRate, stone: stoneRate, oliveoil: oliveoilRate, silver: silverRate };
 };
@@ -132,12 +179,30 @@ export const calculateRPM = (
     rpm.food += (villagers.food_berries * BASE_RATES.food_berries * berry_mult) - (villagers.food_berries * BASE_RATES.food_berries);
   }
 
-  rpm.food += food_base * m.food_mult;
-  rpm.wood += wood_base * m.wood_mult;
-  rpm.gold += gold_base * m.gold_mult;
-  rpm.stone += stone_base * m.stone_mult;
-  rpm.oliveoil += oliveoil_base * m.oliveoil_mult;
-  rpm.silver += silver_base * m.silver_mult;
+  // Apply tech multipliers to all resource bases
+  let food_with_techs = food_base * m.food_mult;
+  let wood_with_techs = wood_base * m.wood_mult;
+  let gold_with_techs = gold_base * m.gold_mult;
+  let stone_with_techs = stone_base * m.stone_mult;
+  let oliveoil_with_techs = oliveoil_base * m.oliveoil_mult;
+  let silver_with_techs = silver_base * m.silver_mult;
+
+  // Order of the Dragon: Gilded Villagers gather resources 28% quicker
+  if (civ === 'od') {
+    food_with_techs *= 1.28;
+    wood_with_techs *= 1.28;
+    gold_with_techs *= 1.28;
+    stone_with_techs *= 1.28;
+    oliveoil_with_techs *= 1.28;
+    silver_with_techs *= 1.28;
+  }
+
+  rpm.food += food_with_techs;
+  rpm.wood += wood_with_techs;
+  rpm.gold += gold_with_techs;
+  rpm.stone += stone_with_techs;
+  rpm.oliveoil += oliveoil_with_techs;
+  rpm.silver += silver_with_techs;
 
   if ((civ === 'mo' || civ === 'gol') && ovooCount && ovooCount > 0) {
     const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 120 : 150;
@@ -293,9 +358,10 @@ export const calculateRequiredVillagers = (
   const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
   const rates = getEffectiveRates(civ, age, activeTechs);
 
-  // Villager costs: 50 food, 25 seconds (base time)
-  const VILLAGER_FOOD_COST = 50;
-  const VILLAGER_TIME = 25;
+  // Get villager stats dynamically from API data
+  const villagerStats = getVillagerStats(allUnits, civ);
+  const VILLAGER_FOOD_COST = villagerStats.cost;
+  const VILLAGER_TIME = villagerStats.time;
   const villagersPerMinutePerTc = 60 / VILLAGER_TIME;
   const villagerFoodDrain = tcProducingVillagers * villagersPerMinutePerTc * VILLAGER_FOOD_COST;
 
@@ -342,14 +408,20 @@ export interface VillagerProductionAnalysis {
 export const calculateVillagerProduction = (
   rpm: ResourceSet,
   tcProducingVillagers: number,
-  unitDrain: ResourceSet
+  unitDrain: ResourceSet,
+  allUnits?: UnitData[],
+  civ?: string
 ): VillagerProductionAnalysis => {
-  // Villager costs: 50 food, 25 seconds (base time)
-  const VILLAGER_FOOD_COST = 50;
-  const VILLAGER_TIME = 25;
+  // Get villager stats dynamically from API data
+  const villagerStats = (allUnits && civ) 
+    ? getVillagerStats(allUnits, civ)
+    : { cost: 50, time: 20 };
+  
+  const VILLAGER_FOOD_COST = villagerStats.cost;
+  const VILLAGER_TIME = villagerStats.time;
   
   // Calculate villager production rate per TC (villagers per minute)
-  const villagersPerMinutePerTc = 60 / VILLAGER_TIME; // 2.4 vill/min per TC
+  const villagersPerMinutePerTc = 60 / VILLAGER_TIME;
   
   // Total villager production rate
   const totalVillagerRate = tcProducingVillagers * villagersPerMinutePerTc;

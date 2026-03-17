@@ -131,7 +131,7 @@ const UnitsModeOutput = () => {
     silver: 0
   };
   const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites);
-  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain);
+  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ);
 
   return (
     <>
@@ -263,7 +263,7 @@ const UnitsModeOutput = () => {
             <div className="p-3 bg-slate-50 rounded border border-slate-100">
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Drain (Vills)</div>
               <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.foodDrainFromVillagers} <span className="text-sm font-normal text-slate-500">/min</span></div>
-              <div className="text-xs text-slate-500 mt-1">50 food × 2.4 vill/min/TC</div>
+              <div className="text-xs text-slate-500 mt-1">Dynamic villager cost based on civ</div>
             </div>
             <div className="p-3 bg-slate-50 rounded border border-slate-100">
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Surplus</div>
