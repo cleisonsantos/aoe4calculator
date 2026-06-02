@@ -113,20 +113,20 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
     try {
       const params = new URLSearchParams(query);
       const civ = params.get('civ') || 'en';
-      const age = parseInt(params.get('age') || '1', 10);
+      const age = Math.max(1, Math.min(4, parseInt(params.get('age') || '1', 10) || 1));
       
       const villagers = { ...defaultVillagers };
       Object.keys(defaultVillagers).forEach((k) => {
         const val = params.get(k);
-        if (val) villagers[k as keyof VillagerAllocation] = parseInt(val, 10);
+        if (val) villagers[k as keyof VillagerAllocation] = Math.max(0, Math.min(200, parseInt(val, 10) || 0));
       });
       
       const techs = params.get('techs') ? params.get('techs')!.split(',') : [];
-      const ovooCount = parseInt(params.get('oc') || '0', 10);
+      const ovooCount = Math.max(0, Math.min(3, parseInt(params.get('oc') || '0', 10) || 0));
       const ovooDoubleProduction = params.get('od') === 'true';
-      const sacredSites = parseInt(params.get('ss') || '0', 10);
-      const relics = parseInt(params.get('rl') || '0', 10);
-      const tcProducingVillagers = params.get('tc') ? parseInt(params.get('tc')!, 10) : 1; // Default to 1 if not specified
+      const sacredSites = Math.max(0, Math.min(3, parseInt(params.get('ss') || '0', 10) || 0));
+      const relics = Math.max(0, Math.min(5, parseInt(params.get('rl') || '0', 10) || 0));
+      const tcProducingVillagers = Math.max(0, Math.min(4, parseInt(params.get('tc') || '1', 10) || 1));
 
       const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
 
@@ -137,7 +137,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
             const segs = part.split(':');
             return {
               id: segs[0],
-              buildings: parseInt(segs[1] || '1', 10),
+              buildings: Math.max(1, Math.min(999, parseInt(segs[1] || '1', 10) || 1)),
               doubleProduced: segs[2] === 'd',
             };
           })
@@ -145,7 +145,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
 
       set({ mode, civ, age, villagers, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, relics, tcProducingVillagers });
     } catch (e) {
-      console.error("Failed to parse URL params", e);
+      if (import.meta.env.DEV) console.error("Failed to parse URL params", e);
     }
   }
 }));

@@ -54,6 +54,7 @@ export const VillagerAllocator = () => {
           onChange={(e) => {
             let val = parseInt(e.target.value, 10);
             if (isNaN(val) || val < 0) val = 0;
+            if (val > 200) val = 200;
             setVillagers(key, val);
           }}
           className="w-full p-2 text-lg font-bold border rounded text-center font-mono focus:outline-none focus:border-[var(--civ-primary)] focus:ring-1 focus:ring-[var(--civ-primary)] bg-white shadow-sm"

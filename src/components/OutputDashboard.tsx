@@ -77,7 +77,7 @@ export const MaxProductionGrid = () => {
     {
       unitId: 'villager',
       unitName: villagerUnit?.name || 'Villager',
-      icon: villagerUnit?.icon || '',
+      icon: villagerUnit?.icon || 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/food.png',
       maxSustainable: maxVillagersPerMin,
     },
   ].sort((a, b) => b.maxSustainable - a.maxSustainable);

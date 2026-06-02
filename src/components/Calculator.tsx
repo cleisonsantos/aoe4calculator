@@ -64,7 +64,7 @@ export const Calculator = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500 font-bold p-8 text-center flex-col">
         <p className="text-2xl mb-4">Error loading data.</p>
-        <p className="text-slate-600 font-normal">{data.error}</p>
+        <p className="text-slate-600 font-normal">Failed to load game data. Please try refreshing the page.</p>
       </div>
     );
   }
