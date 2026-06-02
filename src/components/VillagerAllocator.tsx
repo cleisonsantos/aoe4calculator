@@ -63,7 +63,7 @@ export const VillagerAllocator = () => {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 w-full">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 w-full">
       <div className="flex justify-between items-center mb-6 border-b pb-2 border-slate-100">
         <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
           <span className="bg-[var(--civ-primary)] text-white text-sm px-2 py-1 rounded-full">

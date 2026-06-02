@@ -29,8 +29,8 @@ export const RpmBar = () => {
   const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-      <h3 className="text-xl font-bold mb-4 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+      <h3 className="text-lg font-bold mb-3 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
         <Pickaxe className="w-5 h-5 text-[var(--civ-primary)]" />
         Income (RPM)
       </h3>
@@ -132,8 +132,8 @@ export const RequiredVillagersBar = () => {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-      <div className="flex items-center gap-4 flex-wrap">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-[var(--civ-primary)]" />
           <span className="font-bold text-slate-800">Required Villagers:</span>
@@ -200,8 +200,8 @@ const UnitsModeOutput = () => {
     <>
       {/* Production Summary */}
       {activeUnits.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <h3 className="text-lg font-bold mb-3 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+          <h3 className="text-base font-bold mb-2 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
             <Swords className="w-5 h-5 text-[var(--civ-primary)]" />
             Production Summary
           </h3>
@@ -238,13 +238,13 @@ const UnitsModeOutput = () => {
 
       {/* Villager Production Analysis */}
       {activeUnits.length > 0 && tcProducingVillagers > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-          <h3 className="text-lg font-bold mb-3 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+          <h3 className="text-base font-bold mb-2 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
             <Home className="w-5 h-5 text-[var(--civ-primary)]" />
             Villager Production Analysis
           </h3>
           
-          <div className={`mb-4 p-4 rounded-lg border-2 ${
+          <div className={`mb-3 p-3 rounded-lg border-2 ${
             villagerAnalysis.canProduceSimultaneously 
               ? 'bg-green-50 border-green-200' 
               : 'bg-red-50 border-red-200'

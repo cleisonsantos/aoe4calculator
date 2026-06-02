@@ -71,7 +71,7 @@ export const Calculator = () => {
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
       
-      <header className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
+      <header className="flex items-center justify-between border-b-2 border-slate-200 pb-3">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">AoE4 <span className="text-[var(--civ-primary)]">Calculator</span></h1>
           <p className="text-slate-500 mt-1 text-sm font-medium">Dynamic Production & Timing Engine</p>
@@ -81,7 +81,7 @@ export const Calculator = () => {
 
       <CivSelector />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pb-2">
         <ModeToggle />
         <AgeSelector />
       </div>
@@ -90,10 +90,10 @@ export const Calculator = () => {
         /* ── Resource Mode: Villagers → see what you can produce ── */
         <>
           <RpmBar />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-3 space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-3 space-y-3">
             <VillagerAllocator />
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
               <MaxProductionGrid />
             </div>
             <PassiveGenerationSelector />
@@ -106,8 +106,8 @@ export const Calculator = () => {
         /* ── Units Mode: Pick units → see required economy ── */
         <>
           <RequiredVillagersBar />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 space-y-3">
               <UnitSelector units={data.units} />
               <TownCenterSelector />
               <PassiveGenerationSelector />
