@@ -121,12 +121,12 @@ export const MaxProductionGrid = () => {
 
 // ── Units Mode: show required villagers for desired production ──
 
-const UnitsModeOutput = () => {
+export const RequiredVillagersBar = () => {
   const {
     civ, age, activeTechs,
     units: activeUnits,
-    ovooCount, ovooDoubleProduction, sacredSites,
-    tcProducingVillagers, villagers
+    ovooCount, sacredSites,
+    tcProducingVillagers
   } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
@@ -135,6 +135,47 @@ const UnitsModeOutput = () => {
     ovooCount, sacredSites,
     tcProducingVillagers
   );
+
+  if (activeUnits.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-[var(--civ-primary)]" />
+          <span className="text-lg font-bold text-slate-800">Required Villagers</span>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {([
+            { icon: `${RESOURCE_BASE_URL}/food.png`, label: 'Food', count: required.food },
+            { icon: `${RESOURCE_BASE_URL}/wood.png`, label: 'Wood', count: required.wood },
+            { icon: `${RESOURCE_BASE_URL}/gold.png`, label: 'Gold', count: required.gold },
+            { icon: `${RESOURCE_BASE_URL}/stone.png`, label: 'Stone', count: required.stone },
+          ] as const).map(r => (
+            <div key={r.label} className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-50 border border-slate-100">
+              <img src={r.icon} alt={r.label} className="w-4 h-4 object-contain" />
+              <span className="text-xs font-semibold text-slate-500 uppercase">{r.label}</span>
+              <span className="text-sm font-bold text-slate-800">{r.count}</span>
+            </div>
+          ))}
+          <div className="bg-[var(--civ-primary)]/10 border border-[var(--civ-primary)]/20 rounded-lg px-3 py-1 text-center">
+            <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wider">Total</span>
+            <div className="text-lg font-black text-[var(--civ-primary)]">{required.total}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const UnitsModeOutput = () => {
+  const {
+    civ, age, activeTechs,
+    units: activeUnits,
+    ovooCount, ovooDoubleProduction, sacredSites,
+    tcProducingVillagers, villagers
+  } = useCalculatorStore();
+  const { units: allUnits } = useAoE4Data();
 
   const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
   
@@ -154,50 +195,6 @@ const UnitsModeOutput = () => {
 
   return (
     <>
-      {/* Required Villagers Card */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-        <h3 className="text-xl font-bold mb-4 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
-          <Users className="w-5 h-5 text-[var(--civ-primary)]" />
-          Required Villagers
-        </h3>
-
-        {activeUnits.length === 0 ? (
-          <p className="text-sm text-slate-400 italic">Select units to see the required economy.</p>
-        ) : (
-          <>
-            {/* Total */}
-            <div className="bg-[var(--civ-primary)]/10 border border-[var(--civ-primary)]/20 rounded-lg p-4 mb-4 text-center">
-              <div className="text-sm font-medium text-slate-600 uppercase tracking-wider mb-1">Total Villagers Needed</div>
-              <div className="text-4xl font-black text-[var(--civ-primary)]">{required.total}</div>
-            </div>
-
-            {/* Per resource */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <VillagerCard
-                iconUrl={`${RESOURCE_BASE_URL}/food.png`}
-                label="Food"
-                count={required.food}
-              />
-              <VillagerCard
-                iconUrl={`${RESOURCE_BASE_URL}/wood.png`}
-                label="Wood"
-                count={required.wood}
-              />
-              <VillagerCard
-                iconUrl={`${RESOURCE_BASE_URL}/gold.png`}
-                label="Gold"
-                count={required.gold}
-              />
-              <VillagerCard
-                iconUrl={`${RESOURCE_BASE_URL}/stone.png`}
-                label="Stone"
-                count={required.stone}
-              />
-            </div>
-          </>
-        )}
-      </div>
-
       {/* Production Summary */}
       {activeUnits.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
@@ -317,14 +314,4 @@ const ResourceCard = ({ iconUrl, label, value }: { iconUrl: string; label: strin
   </div>
 );
 
-const VillagerCard = ({ iconUrl, label, count }: { iconUrl: string; label: string; count: number }) => (
-  <div className="flex items-center p-3 rounded bg-slate-50 border border-slate-100 gap-3">
-    <img src={iconUrl} alt={label} className="w-6 h-6 object-contain" />
-    <div>
-      <div className="text-xs text-slate-500 font-medium uppercase">{label}</div>
-      <div className="text-xl font-bold text-slate-800">
-        {count} <span className="text-xs font-normal text-slate-400">vills</span>
-      </div>
-    </div>
-  </div>
-);
+

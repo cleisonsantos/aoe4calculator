@@ -3,7 +3,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
 import { CivSelector } from './CivSelector';
 import { VillagerAllocator } from './VillagerAllocator';
-import { OutputDashboard, RpmBar, MaxProductionGrid } from './OutputDashboard';
+import { OutputDashboard, RpmBar, MaxProductionGrid, RequiredVillagersBar } from './OutputDashboard';
 import { TechSelector } from './TechSelector';
 import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
@@ -104,6 +104,8 @@ export const Calculator = () => {
         </>
       ) : (
         /* ── Units Mode: Pick units → see required economy ── */
+        <>
+        <RequiredVillagersBar />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
             <UnitSelector units={data.units} />
@@ -115,6 +117,7 @@ export const Calculator = () => {
             <OutputDashboard />
           </div>
         </div>
+        </>
       )}
       
     </div>
