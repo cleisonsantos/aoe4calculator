@@ -40,7 +40,7 @@ export const Calculator = () => {
       if (state.tcProducingVillagers > 0) params.set('tc', state.tcProducingVillagers.toString());
 
       if (state.units.length > 0) {
-        const uParam = state.units.map(u => `${u.id}:${u.buildings}`).join(',');
+        const uParam = state.units.map(u => `${u.id}:${u.buildings}${u.doubleProduced ? ':d' : ''}`).join(',');
         params.set('u', uParam);
       }
 
@@ -69,21 +69,22 @@ export const Calculator = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
       
-      <header className="flex flex-col md:flex-row md:items-end justify-between border-b-2 border-slate-200 pb-4 mb-8">
+      <header className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">AoE4 <span className="text-[var(--civ-primary)]">Calculator</span></h1>
           <p className="text-slate-500 mt-1 text-sm font-medium">Dynamic Production & Timing Engine</p>
         </div>
-        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <ThemeToggle />
-          <ModeToggle />
-          <AgeSelector />
-        </div>
+        <ThemeToggle />
       </header>
 
       <CivSelector />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-2">
+        <ModeToggle />
+        <AgeSelector />
+      </div>
 
       {mode === 'resource' ? (
         /* ── Resource Mode: Villagers → see what you can produce ── */
