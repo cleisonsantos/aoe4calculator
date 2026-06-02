@@ -3,7 +3,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
 import { CivSelector } from './CivSelector';
 import { VillagerAllocator } from './VillagerAllocator';
-import { OutputDashboard, RpmBar, MaxProductionGrid, RequiredVillagersBar } from './OutputDashboard';
+import { OutputDashboard, RpmBar, MaxProductionGrid, RequiredVillagersBar, ProductionSummary } from './OutputDashboard';
 import { TechSelector } from './TechSelector';
 import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
@@ -109,6 +109,7 @@ export const Calculator = () => {
           <RequiredVillagersBar />
           <div className="space-y-3">
             <UnitSelector units={data.units} />
+            <ProductionSummary />
             <TownCenterSelector />
             <PassiveGenerationSelector />
             <TechSelector techs={data.technologies} />
