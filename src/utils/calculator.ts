@@ -352,9 +352,9 @@ export const calculateMaxProduction = (
       unitId: u.id,
       unitName: u.name,
       icon: u.icon,
-      maxSustainable: maxSustainable === Infinity ? 999 : Math.max(0, maxSustainable),
+      maxSustainable: maxSustainable === Infinity ? upmPerBuilding : Math.max(0, maxSustainable),
     };
-  }).filter(e => e.maxSustainable > 0);
+  });
 };
 
 // ── Units Mode output: required villagers for desired production ──
