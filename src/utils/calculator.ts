@@ -254,8 +254,7 @@ export interface UnitDrain {
 export const calculateProductionDrain = (
   activeUnits: ProductionUnit[],
   allUnits: UnitData[],
-  civ: string,
-  ovooDoubleProduction: boolean
+  civ: string
 ): { perUnit: UnitDrain[]; total: ResourceSet } => {
   const total: ResourceSet = { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 };
   const perUnit: UnitDrain[] = [];
@@ -271,7 +270,7 @@ export const calculateProductionDrain = (
     let stoneCost = uDef.costs.stone || 0;
 
     let upmMultiplier = 1;
-    if (civ === 'mo' && ovooDoubleProduction) {
+    if (civ === 'mo' && au.doubleProduced) {
       upmMultiplier = 2;
       stoneCost += (foodCost + woodCost + goldCost);
     }
@@ -369,12 +368,11 @@ export const calculateRequiredVillagers = (
   civ: string,
   age: number,
   activeTechs: string[],
-  ovooDoubleProduction: boolean,
   ovooCount?: number,
   sacredSites?: number,
   tcProducingVillagers: number = 0
 ): RequiredVillagers => {
-  const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
+  const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ);
   const rates = getEffectiveRates(civ, age, activeTechs);
 
   // Get villager stats dynamically from API data

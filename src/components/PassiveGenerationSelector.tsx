@@ -6,7 +6,7 @@ const STONE_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/as
 const GOLD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/gold.png';
 
 export const PassiveGenerationSelector = () => {
-  const { civ, ovooCount, ovooDoubleProduction, sacredSites, setOvoo, setSacredSites } = useCalculatorStore();
+  const { civ, mode, ovooCount, ovooDoubleProduction, sacredSites, setOvoo, setSacredSites } = useCalculatorStore();
 
   const isMongolVariant = civ === 'mo' || civ === 'gol';
 
@@ -63,20 +63,26 @@ export const PassiveGenerationSelector = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-slate-700 flex items-center gap-1">
-                    <CopyPlus className="w-4 h-4 text-[var(--civ-primary)]" /> Double Production
-                  </span>
-                  <span className="text-xs text-slate-500">Spend stone to produce 2x units</span>
+              {mode === 'resource' ? (
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                      <CopyPlus className="w-4 h-4 text-[var(--civ-primary)]" /> Double Production
+                    </span>
+                    <span className="text-xs text-slate-500">Spend stone to produce 2x units</span>
+                  </div>
+                  <button
+                    onClick={() => setOvoo(ovooCount, !ovooDoubleProduction)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${ovooDoubleProduction ? 'bg-[var(--civ-primary)]' : 'bg-slate-300'}`}
+                  >
+                    <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${ovooDoubleProduction ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setOvoo(ovooCount, !ovooDoubleProduction)}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${ovooDoubleProduction ? 'bg-[var(--civ-primary)]' : 'bg-slate-300'}`}
-                >
-                  <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${ovooDoubleProduction ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
+              ) : (
+                <div className="pt-2 text-xs text-slate-400 italic">
+                  Enable double production per unit using the stone button in the unit list above
+                </div>
+              )}
             </div>
           )}
         </div>

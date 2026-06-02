@@ -116,11 +116,11 @@ const UnitsModeOutput = () => {
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
-    ovooDoubleProduction, ovooCount, sacredSites,
+    ovooCount, sacredSites,
     tcProducingVillagers
   );
 
-  const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ, ovooDoubleProduction);
+  const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
   
   // Calculate RPM for villager production analysis based on REQUIRED villagers in Units Mode
   // this ensures the analysis shows if the REQUIRED economy is sufficient

@@ -1,8 +1,10 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { type UnitData } from '../data/api';
-import { Plus, Minus, X, Swords, Pickaxe } from 'lucide-react';
+import { Plus, Minus, X, Swords, Pickaxe, CopyPlus } from 'lucide-react';
 import { CostDisplay } from './ResourceIcon';
+
+const STONE_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/stone.png';
 
 const unitTooltip = (u: UnitData) => {
   const costStr = [
@@ -28,7 +30,8 @@ const unitTooltip = (u: UnitData) => {
 };
 
 export const UnitSelector = ({ units }: { units: UnitData[] }) => {
-  const { civ, age, mode, units: activeUnits, setUnitProduction } = useCalculatorStore();
+  const { civ, age, mode, units: activeUnits, setUnitProduction, toggleDoubleProduction } = useCalculatorStore();
+  const isMongolVariant = civ === 'mo' || civ === 'gol';
 
   // Filter available units for current civ and age, dedup by baseId (keep highest age)
   const availableUnits = Object.values(
@@ -110,6 +113,21 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                  {isMongolVariant && mode === 'unit' && (
+                    <div className="flex flex-col items-center">
+                      <button
+                        onClick={() => toggleDoubleProduction(au.id)}
+                        className={`p-1.5 rounded-md transition-all border ${au.doubleProduced ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300'}`}
+                        title={au.doubleProduced ? 'Double production active (costs stone)' : 'Enable double production'}
+                      >
+                        <img src={STONE_ICON} alt="Ovoo" className="w-4 h-4 object-contain" />
+                      </button>
+                      {au.doubleProduced && (
+                        <span className="text-[9px] font-bold text-amber-600 mt-0.5">2x</span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="text-xs text-right">
                     <div className="text-slate-500 font-medium uppercase tracking-wider">Buildings</div>
                     <div className="font-bold text-slate-700">{au.buildings}x</div>

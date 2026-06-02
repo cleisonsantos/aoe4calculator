@@ -88,10 +88,9 @@ describe('Mongols calculator rules', () => {
 
   it('doubles Mongol unit output and charges the extra unit as stone drain', () => {
     const result = calculateProductionDrain(
-      [{ id: 'horseman', buildings: 1 }],
+      [{ id: 'horseman', buildings: 1, doubleProduced: true }],
       allUnits,
-      'mo',
-      true
+      'mo'
     );
 
     expect(result.perUnit).toHaveLength(1);
@@ -109,10 +108,9 @@ describe('Mongols calculator rules', () => {
 
   it('does not apply Ovoo double production to non-Mongol civilizations', () => {
     const result = calculateProductionDrain(
-      [{ id: 'horseman', buildings: 1 }],
+      [{ id: 'horseman', buildings: 1, doubleProduced: true }],
       allUnits,
-      'en',
-      true
+      'en'
     );
 
     expect(result.perUnit).toHaveLength(1);
@@ -129,12 +127,11 @@ describe('Mongols calculator rules', () => {
 
   it('does not count Ovoo stone as requiring villagers', () => {
     const required = calculateRequiredVillagers(
-      [{ id: 'horseman', buildings: 1 }],
+      [{ id: 'horseman', buildings: 1, doubleProduced: true }],
       allUnits,
       'mo',
       4,
       [],
-      true,
       1,
       0,
       0
