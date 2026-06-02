@@ -205,7 +205,7 @@ export const calculateRPM = (
   rpm.silver += silver_with_techs;
 
   if ((civ === 'mo' || civ === 'gol') && ovooCount && ovooCount > 0) {
-    const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 120 : 150;
+    const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 130 : 160;
     rpm.stone += ovooRate * ovooCount;
   }
 
@@ -376,7 +376,7 @@ export const calculateRequiredVillagers = (
   }
 
   if ((civ === 'mo' || civ === 'gol') && ovooCount && ovooCount > 0) {
-    const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 120 : 150;
+    const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 130 : 160;
     stoneDrain = Math.max(0, stoneDrain - ovooRate * ovooCount);
   }
 
