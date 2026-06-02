@@ -4,8 +4,10 @@ import { CostDisplay } from './ResourceIcon';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const CORE_ECO_TECHS = {
-  tier1: ['wheelbarrow'],
+  tier1: ['wheelbarrow', 'survival-techniques', 'forestry'],
+  improved_tier1: ['wheelbarrow-improved', 'survival-techniques-improved', 'forestry-improved'],
   tier2: ['double-broadax', 'horticulture', 'specialized-pick'],
+  improved_tier2: ['double-broadax-improved', 'horticulture-improved', 'specialized-pick-improved'],
   tier3: ['lumber-preservation', 'fertilization', 'shaft-mining'],
   tier4: ['crosscut-saw', 'cross-breeding', 'cupellation'], 
 };
@@ -15,7 +17,7 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   const getTechForCiv = (baseId: string) => {
-    const matches = techs.filter(t => t.baseId === baseId || t.baseId.includes(baseId));
+    const matches = techs.filter(t => t.baseId === baseId);
     const exact = matches.find(t => t.civs.includes(civ));
     return exact || matches[0];
   };
@@ -86,7 +88,9 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
       {!isCollapsed && (
         <div className="mt-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
           {renderTechTier('Core & Age 1', CORE_ECO_TECHS.tier1)}
+          {renderTechTier('Ovoo Improved (Age 1)', CORE_ECO_TECHS.improved_tier1)}
           {renderTechTier('Age 2 Upgrades', CORE_ECO_TECHS.tier2)}
+          {renderTechTier('Ovoo Improved (Age 2)', CORE_ECO_TECHS.improved_tier2)}
           {renderTechTier('Age 3 Upgrades', CORE_ECO_TECHS.tier3)}
           {renderTechTier('Age 4 Upgrades', CORE_ECO_TECHS.tier4)}
         </div>

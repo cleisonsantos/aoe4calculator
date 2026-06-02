@@ -84,15 +84,34 @@ export const getResourceMultipliers = (
     silver_mult *= 1.10;
   }
 
+  if (activeTechs.includes('survival-techniques')) food_mult *= 1.10;
+  if (activeTechs.includes('forestry')) wood_mult *= 1.10;
+
+  // Mongol Ovoo-improved eco techs
+  if (activeTechs.includes('wheelbarrow-improved')) {
+    food_mult *= 1.10;
+    wood_mult *= 1.15;
+    gold_mult *= 1.15;
+    stone_mult *= 1.15;
+    oliveoil_mult *= 1.15;
+    silver_mult *= 1.15;
+  }
+
+  if (activeTechs.includes('survival-techniques-improved')) food_mult *= 1.20;
+  if (activeTechs.includes('forestry-improved')) wood_mult *= 1.20;
+
   if (activeTechs.includes('horticulture')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
+  if (activeTechs.includes('horticulture-improved')) food_mult *= 1.30;
   if (activeTechs.includes('fertilization')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
   if (activeTechs.includes('cross-breeding')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
 
   if (activeTechs.includes('double-broadax')) wood_mult *= 1.15;
+  if (activeTechs.includes('double-broadax-improved')) wood_mult *= 1.35;
   if (activeTechs.includes('lumber-preservation')) wood_mult *= 1.15;
   if (activeTechs.includes('crosscut-saw')) wood_mult *= 1.15;
 
   if (activeTechs.includes('specialized-pick')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
+  if (activeTechs.includes('specialized-pick-improved')) { gold_mult *= 1.35; stone_mult *= 1.35; silver_mult *= 1.35; }
   if (activeTechs.includes('acid-distillation')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
   if (activeTechs.includes('cupellation')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
 
