@@ -73,12 +73,10 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
             return (
               <button
                 key={u.id}
-                onClick={() => {
-                  if (!isActive) setUnitProduction(u.id, 1);
-                }}
+                onClick={() => setUnitProduction(u.id, isActive ? 0 : 1)}
                 className={`flex items-center gap-2 p-1.5 pr-2 border rounded-md transition-all ${
                   isActive 
-                    ? 'border-[var(--civ-primary)] bg-[var(--civ-primary)]/5 opacity-60' 
+                    ? 'border-[var(--civ-primary)] bg-[var(--civ-primary)]/10 ring-1 ring-[var(--civ-primary)]' 
                     : 'border-slate-300 bg-white hover:border-[var(--civ-primary)] hover:bg-slate-50'
                 }`}
                 title={unitTooltip(u)}
