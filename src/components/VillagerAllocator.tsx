@@ -73,64 +73,17 @@ export const VillagerAllocator = () => {
         </h3>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {/* Food Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.food_sheep} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Food</span>
-          </div>
-          {renderAllocator('food_sheep')}
-          {renderAllocator('food_berries')}
-          {renderAllocator('food_deer')}
-          {renderAllocator('food_boar')}
-          {renderAllocator('food_farms')}
-        </div>
-
-        {/* Wood Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.wood} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Wood</span>
-          </div>
-          {renderAllocator('wood')}
-        </div>
-
-        {/* Gold Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.gold} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Gold</span>
-          </div>
-          {renderAllocator('gold')}
-        </div>
-
-        {/* Stone Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.stone} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Stone</span>
-          </div>
-          {renderAllocator('stone')}
-        </div>
-
-        {/* Olive Oil Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.oliveoil} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Olive Oil</span>
-          </div>
-          {renderAllocator('oliveoil')}
-        </div>
-
-        {/* Silver Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.silver} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Silver</span>
-          </div>
-          {renderAllocator('silver')}
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2">
+        {renderAllocator('food_sheep')}
+        {renderAllocator('food_berries')}
+        {renderAllocator('food_deer')}
+        {renderAllocator('food_boar')}
+        {renderAllocator('food_farms')}
+        {renderAllocator('wood')}
+        {renderAllocator('gold')}
+        {renderAllocator('stone')}
+        {renderAllocator('oliveoil')}
+        {renderAllocator('silver')}
       </div>
     </div>
   );
