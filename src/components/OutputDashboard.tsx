@@ -25,8 +25,8 @@ export const OutputDashboard = () => {
 // ── Resource Mode: show RPM + max sustainable production ──
 
 export const RpmBar = () => {
-  const { villagers, civ, age, activeTechs, ovooCount, sacredSites } = useCalculatorStore();
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
+  const { villagers, civ, age, activeTechs, ovooCount, sacredSites, relics } = useCalculatorStore();
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, relics);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
@@ -51,10 +51,10 @@ export const RpmBar = () => {
 };
 
 export const MaxProductionGrid = () => {
-  const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites } = useCalculatorStore();
+  const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, relics } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, relics);
 
   const availableUnits = Object.values(
     allUnits
@@ -122,12 +122,12 @@ export const MaxProductionGrid = () => {
 // ── Units Mode: show required villagers for desired production ──
 
 export const RequiredVillagersBar = () => {
-  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, tcProducingVillagers } = useCalculatorStore();
+  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, relics, tcProducingVillagers } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
-    ovooCount, sacredSites,
+    ovooCount, sacredSites, relics,
     tcProducingVillagers
   );
 
@@ -169,14 +169,14 @@ const UnitsModeOutput = () => {
   const {
     civ, age, activeTechs,
     units: activeUnits,
-    ovooCount, ovooDoubleProduction, sacredSites,
+    ovooCount, ovooDoubleProduction, sacredSites, relics,
     tcProducingVillagers, villagers
   } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
-    ovooCount, sacredSites,
+    ovooCount, sacredSites, relics,
     tcProducingVillagers
   );
 
@@ -193,7 +193,7 @@ const UnitsModeOutput = () => {
     oliveoil: 0,
     silver: 0
   };
-  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites);
+  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, relics);
   const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ);
 
   return (

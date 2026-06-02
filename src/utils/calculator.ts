@@ -163,7 +163,8 @@ export const calculateRPM = (
   age: number,
   activeTechs: string[],
   ovooCount?: number,
-  sacredSites?: number
+  sacredSites?: number,
+  relics?: number
 ): ResourceSet => {
   let rpm: ResourceSet = {
     food: 0,
@@ -231,6 +232,10 @@ export const calculateRPM = (
   if (sacredSites && sacredSites > 0) {
     const siteRate = civ === 'de' ? 150 : 100;
     rpm.gold += siteRate * sacredSites;
+  }
+
+  if (relics && relics > 0) {
+    rpm.gold += 100 * relics;
   }
 
   return {
@@ -370,6 +375,7 @@ export const calculateRequiredVillagers = (
   activeTechs: string[],
   ovooCount?: number,
   sacredSites?: number,
+  relics?: number,
   tcProducingVillagers: number = 0
 ): RequiredVillagers => {
   const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ);
@@ -390,6 +396,10 @@ export const calculateRequiredVillagers = (
   if (sacredSites && sacredSites > 0) {
     const siteRate = civ === 'de' ? 150 : 100;
     goldDrain = Math.max(0, goldDrain - siteRate * sacredSites);
+  }
+
+  if (relics && relics > 0) {
+    goldDrain = Math.max(0, goldDrain - 100 * relics);
   }
 
   if ((civ === 'mo' || civ === 'gol') && ovooCount && ovooCount > 0) {

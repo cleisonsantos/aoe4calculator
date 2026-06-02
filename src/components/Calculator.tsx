@@ -37,6 +37,7 @@ export const Calculator = () => {
       if (state.ovooCount > 0) params.set('oc', state.ovooCount.toString());
       if (state.ovooDoubleProduction) params.set('od', 'true');
       if (state.sacredSites > 0) params.set('ss', state.sacredSites.toString());
+      if (state.relics > 0) params.set('rl', state.relics.toString());
       if (state.tcProducingVillagers > 0) params.set('tc', state.tcProducingVillagers.toString());
 
       if (state.units.length > 0) {
