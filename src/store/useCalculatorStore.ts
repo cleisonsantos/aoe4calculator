@@ -16,6 +16,7 @@ export interface VillagerAllocation {
 export interface ProductionUnit {
   id: string; // unit baseId
   buildings: number; // how many buildings are producing this
+  doubleProduced?: boolean; // Ovoo double production for this unit (Mongols/Golden Horde)
 }
 
 export type CalculatorMode = 'resource' | 'unit';
@@ -39,6 +40,7 @@ interface CalculatorState {
   setVillagers: (type: keyof VillagerAllocation, count: number) => void;
   toggleTech: (techId: string) => void;
   setUnitProduction: (id: string, buildings: number) => void;
+  toggleDoubleProduction: (id: string) => void;
   setOvoo: (count: number, double: boolean) => void;
   setSacredSites: (count: number) => void;
   setTcProducingVillagers: (count: number) => void;
@@ -93,6 +95,12 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
       if (buildings <= 0) return { units: state.units };
       return { units: [...state.units, { id, buildings }] };
     }),
+  toggleDoubleProduction: (id) =>
+    set((state) => ({
+      units: state.units.map((u) =>
+        u.id === id ? { ...u, doubleProduced: !u.doubleProduced } : u
+      ),
+    })),
   setOvoo: (count, double) => set({ ovooCount: count, ovooDoubleProduction: double }),
   setSacredSites: (count) => set({ sacredSites: count }),
   setTcProducingVillagers: (count) => set({ tcProducingVillagers: count }),
@@ -117,7 +125,20 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
 
       const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
 
-      set({ mode, civ, age, villagers, activeTechs: techs, ovooCount, ovooDoubleProduction, sacredSites, tcProducingVillagers });
+      // Parse units: "horseman:1:d,archer:2" (":d" = doubleProduced)
+      const uParam = params.get('u');
+      const units: ProductionUnit[] = uParam
+        ? uParam.split(',').map(part => {
+            const segs = part.split(':');
+            return {
+              id: segs[0],
+              buildings: parseInt(segs[1] || '1', 10),
+              doubleProduced: segs[2] === 'd',
+            };
+          })
+        : [];
+
+      set({ mode, civ, age, villagers, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, tcProducingVillagers });
     } catch (e) {
       console.error("Failed to parse URL params", e);
     }
