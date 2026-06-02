@@ -4,6 +4,29 @@ import { type UnitData } from '../data/api';
 import { Plus, Minus, X, Swords, Pickaxe } from 'lucide-react';
 import { CostDisplay } from './ResourceIcon';
 
+const unitTooltip = (u: UnitData) => {
+  const costStr = [
+    u.costs?.food ? `${u.costs.food}F` : '',
+    u.costs?.wood ? `${u.costs.wood}W` : '',
+    u.costs?.gold ? `${u.costs.gold}G` : '',
+    u.costs?.stone ? `${u.costs.stone}S` : '',
+  ].filter(Boolean).join(' ');
+
+  const armorStr = u.armor?.map(a => `${a.type} ${a.value}`).join(', ');
+  const weaponStr = u.weapons?.map(w =>
+    `${w.name} (${w.type}): ${w.damage}${w.range ? ` range ${w.range.min}-${w.range.max}` : ''}`
+  ).join('\n');
+
+  return [
+    `${u.name}${u.hitpoints ? `  |  HP: ${u.hitpoints}` : ''}`,
+    `Cost: ${costStr}  |  Time: ${u.costs?.time || '?'}s`,
+    armorStr ? `Armor: ${armorStr}` : '',
+    u.movement?.speed ? `Speed: ${u.movement.speed}` : '',
+    weaponStr ? `\n${weaponStr}` : '',
+    u.description ? `\n${u.description}` : '',
+  ].filter(Boolean).join('\n');
+};
+
 export const UnitSelector = ({ units }: { units: UnitData[] }) => {
   const { civ, age, mode, units: activeUnits, setUnitProduction } = useCalculatorStore();
 
@@ -55,7 +78,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
                     ? 'border-[var(--civ-primary)] bg-[var(--civ-primary)]/5 opacity-60' 
                     : 'border-slate-300 bg-white hover:border-[var(--civ-primary)] hover:bg-slate-50'
                 }`}
-                title={`${u.name}`}
+                title={unitTooltip(u)}
               >
                 <img src={u.icon} alt={u.name} className="w-8 h-8 rounded-sm object-cover bg-slate-900 shrink-0" />
                 <div className="flex flex-col items-start overflow-hidden text-left">
