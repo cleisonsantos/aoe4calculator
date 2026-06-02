@@ -122,12 +122,7 @@ export const MaxProductionGrid = () => {
 // ── Units Mode: show required villagers for desired production ──
 
 export const RequiredVillagersBar = () => {
-  const {
-    civ, age, activeTechs,
-    units: activeUnits,
-    ovooCount, sacredSites,
-    tcProducingVillagers
-  } = useCalculatorStore();
+  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, tcProducingVillagers } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
@@ -136,33 +131,35 @@ export const RequiredVillagersBar = () => {
     tcProducingVillagers
   );
 
-  if (activeUnits.length === 0) return null;
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-[var(--civ-primary)]" />
-          <span className="text-lg font-bold text-slate-800">Required Villagers</span>
+          <span className="font-bold text-slate-800">Required Villagers:</span>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {([
-            { icon: `${RESOURCE_BASE_URL}/food.png`, label: 'Food', count: required.food },
-            { icon: `${RESOURCE_BASE_URL}/wood.png`, label: 'Wood', count: required.wood },
-            { icon: `${RESOURCE_BASE_URL}/gold.png`, label: 'Gold', count: required.gold },
-            { icon: `${RESOURCE_BASE_URL}/stone.png`, label: 'Stone', count: required.stone },
-          ] as const).map(r => (
-            <div key={r.label} className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-50 border border-slate-100">
-              <img src={r.icon} alt={r.label} className="w-4 h-4 object-contain" />
-              <span className="text-xs font-semibold text-slate-500 uppercase">{r.label}</span>
-              <span className="text-sm font-bold text-slate-800">{r.count}</span>
+        {activeUnits.length === 0 ? (
+          <span className="text-sm text-slate-400 italic">Select units to see the required economy.</span>
+        ) : (
+          <>
+            <div className="bg-[var(--civ-primary)]/10 border border-[var(--civ-primary)]/20 rounded-lg px-4 py-1.5">
+              <span className="text-2xl font-black text-[var(--civ-primary)]">{required.total}</span>
+              <span className="text-sm text-slate-500 ml-1">total</span>
             </div>
-          ))}
-          <div className="bg-[var(--civ-primary)]/10 border border-[var(--civ-primary)]/20 rounded-lg px-3 py-1 text-center">
-            <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wider">Total</span>
-            <div className="text-lg font-black text-[var(--civ-primary)]">{required.total}</div>
-          </div>
-        </div>
+            {[
+              { url: `${RESOURCE_BASE_URL}/food.png`, label: 'Food', count: required.food },
+              { url: `${RESOURCE_BASE_URL}/wood.png`, label: 'Wood', count: required.wood },
+              { url: `${RESOURCE_BASE_URL}/gold.png`, label: 'Gold', count: required.gold },
+              { url: `${RESOURCE_BASE_URL}/stone.png`, label: 'Stone', count: required.stone },
+            ].map(r => (
+              <div key={r.label} className="flex items-center gap-1.5">
+                <img src={r.url} alt={r.label} className="w-4 h-4 object-contain" />
+                <span className="text-sm font-semibold text-slate-700">{r.count}</span>
+                <span className="text-[10px] text-slate-400 uppercase">{r.label}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
@@ -176,6 +173,12 @@ const UnitsModeOutput = () => {
     tcProducingVillagers, villagers
   } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
+
+  const required = calculateRequiredVillagers(
+    activeUnits, allUnits, civ, age, activeTechs,
+    ovooCount, sacredSites,
+    tcProducingVillagers
+  );
 
   const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
   
