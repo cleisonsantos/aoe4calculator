@@ -6,6 +6,7 @@ import {
   calculateMaxProduction,
   calculateRequiredVillagers,
   calculateVillagerProduction,
+  getVillagerStats,
 } from '../utils/calculator';
 import { CostDisplay } from './ResourceIcon';
 import { useAoE4Data } from '../hooks/useAoE4Data';
@@ -14,24 +15,47 @@ import { Pickaxe, Swords, Users, Home, AlertTriangle, CheckCircle } from 'lucide
 const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources';
 
 export const OutputDashboard = () => {
-  const { mode } = useCalculatorStore();
-
   return (
     <div className="sticky top-4 space-y-4">
-      {mode === 'resource' ? <ResourceModeOutput /> : <UnitsModeOutput />}
+      <UnitsModeOutput />
     </div>
   );
 };
 
 // ── Resource Mode: show RPM + max sustainable production ──
 
-const ResourceModeOutput = () => {
+export const RpmBar = () => {
+  const { villagers, civ, age, activeTechs, ovooCount, sacredSites } = useCalculatorStore();
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <h3 className="text-xl font-bold mb-4 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
+        <Pickaxe className="w-5 h-5 text-[var(--civ-primary)]" />
+        Income (RPM)
+      </h3>
+      <div className="flex items-center gap-3 flex-wrap">
+        <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/food.png`} label="Food" value={rpm.food} />
+        <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/wood.png`} label="Wood" value={rpm.wood} />
+        <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/gold.png`} label="Gold" value={rpm.gold} />
+        <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/stone.png`} label="Stone" value={rpm.stone} />
+        {rpm.oliveoil > 0 && (
+          <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/oliveoil.png`} label="Olive Oil" value={rpm.oliveoil} />
+        )}
+        {rpm.silver > 0 && (
+          <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/silver.png`} label="Silver" value={rpm.silver} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const MaxProductionGrid = () => {
   const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
   const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
 
-  // Available military units for this civ/age, dedup by baseId (keep highest age)
   const availableUnits = Object.values(
     allUnits
       .filter(u => u.civs.includes(civ) && u.classes?.includes('military') && !u.classes?.includes('ship') && u.age <= age)
@@ -44,62 +68,54 @@ const ResourceModeOutput = () => {
 
   const maxProd = calculateMaxProduction(rpm, availableUnits, civ, ovooDoubleProduction);
 
-  // Sort by max sustainable descending
-  const sorted = [...maxProd].sort((a, b) => b.maxSustainable - a.maxSustainable);
+  const villagerStats = getVillagerStats(allUnits, civ);
+  const maxVillagersPerMin = villagerStats.cost > 0 ? +(rpm.food / villagerStats.cost).toFixed(1) : 0;
+  const villagerUnit = allUnits.find(u => u.civs.includes(civ) && u.classes?.includes('villager'));
+
+  const sorted = [
+    ...maxProd,
+    {
+      unitId: 'villager',
+      unitName: villagerUnit?.name || 'Villager',
+      icon: villagerUnit?.icon || '',
+      maxSustainable: maxVillagersPerMin,
+    },
+  ].sort((a, b) => b.maxSustainable - a.maxSustainable);
+
+  if (sorted.length === 0) return null;
 
   return (
-    <>
-      {/* RPM Card */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-        <h3 className="text-xl font-bold mb-4 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
-          <Pickaxe className="w-5 h-5 text-[var(--civ-primary)]" />
-          Income (RPM)
-        </h3>
-
-        <div className="grid grid-cols-2 gap-3">
-          <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/food.png`} label="Food" value={rpm.food} />
-          <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/wood.png`} label="Wood" value={rpm.wood} />
-          <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/gold.png`} label="Gold" value={rpm.gold} />
-          <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/stone.png`} label="Stone" value={rpm.stone} />
-          {rpm.oliveoil > 0 && (
-            <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/oliveoil.png`} label="Olive Oil" value={rpm.oliveoil} />
-          )}
-          {rpm.silver > 0 && (
-            <ResourceCard iconUrl={`${RESOURCE_BASE_URL}/silver.png`} label="Silver" value={rpm.silver} />
-          )}
-        </div>
+    <div>
+      <h3 className="text-lg font-bold mb-3 text-slate-800 flex items-center gap-2">
+        <Swords className="w-5 h-5 text-[var(--civ-primary)]" />
+        Max Sustainable Production
+      </h3>
+      <p className="text-xs text-slate-500 mb-4">
+        How many of each unit your economy can continuously sustain (solo).
+      </p>
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-11 gap-2">
+        {sorted.slice(0, 30).map(entry => {
+          const isVillager = entry.unitId === 'villager';
+          const uDef = isVillager
+            ? villagerUnit
+            : allUnits.find(u => u.id === entry.unitId && u.civs.includes(civ));
+          const costs = isVillager
+            ? { food: villagerStats.cost, time: villagerStats.time }
+            : uDef?.costs;
+          return (
+            <div
+              key={entry.unitId}
+              className="p-2 rounded flex flex-col items-center justify-center border border-slate-200 bg-white hover:border-[var(--civ-primary)] hover:bg-slate-50 transition-all"
+              title={costs ? `${entry.unitName} — ${costs.food ? costs.food + 'F ' : ''}${costs.wood ? costs.wood + 'W ' : ''}${costs.gold ? costs.gold + 'G ' : ''}${'time' in costs && costs.time ? costs.time + 's' : ''}` : entry.unitName}
+            >
+              <img src={entry.icon} alt={entry.unitName} className="w-8 h-8 rounded bg-slate-900 object-cover mb-1" />
+              <div className="font-bold text-[10px] text-center leading-tight text-slate-700 truncate w-full">{entry.unitName}</div>
+              <div className="text-xs font-bold text-[var(--civ-primary)]">{entry.maxSustainable.toFixed(1)} <span className="text-[9px] font-normal text-slate-400">/min</span></div>
+            </div>
+          );
+        })}
       </div>
-
-      {/* Max Sustainable Production */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-        <h3 className="text-lg font-bold mb-3 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
-          <Swords className="w-5 h-5 text-[var(--civ-primary)]" />
-          Max Sustainable Production
-        </h3>
-        <p className="text-xs text-slate-500 mb-4">
-          How many of each unit your economy can continuously sustain (solo).
-        </p>
-
-        {sorted.length === 0 ? (
-          <p className="text-sm text-slate-400 italic">No units available for this age.</p>
-        ) : (
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-            {sorted.slice(0, 20).map(entry => (
-              <div key={entry.unitId} className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-2">
-                  <img src={entry.icon} alt={entry.unitName} className="w-7 h-7 rounded bg-slate-900" />
-                  <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">{entry.unitName}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-lg font-bold text-slate-900 tabular-nums">{entry.maxSustainable.toFixed(1)}</span>
-                  <span className="text-xs text-slate-500 ml-1">/min</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
+    </div>
   );
 };
 

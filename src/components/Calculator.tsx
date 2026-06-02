@@ -3,7 +3,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
 import { CivSelector } from './CivSelector';
 import { VillagerAllocator } from './VillagerAllocator';
-import { OutputDashboard } from './OutputDashboard';
+import { OutputDashboard, RpmBar, MaxProductionGrid } from './OutputDashboard';
 import { TechSelector } from './TechSelector';
 import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
@@ -69,7 +69,7 @@ export const Calculator = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
       
       <header className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
         <div>
@@ -88,20 +88,24 @@ export const Calculator = () => {
 
       {mode === 'resource' ? (
         /* ── Resource Mode: Villagers → see what you can produce ── */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <>
+          <RpmBar />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-3 space-y-5">
             <VillagerAllocator />
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+              <MaxProductionGrid />
+            </div>
             <PassiveGenerationSelector />
+            <TownCenterSelector />
             <TechSelector techs={data.technologies} />
           </div>
-          <div className="lg:col-span-1">
-            <OutputDashboard />
-          </div>
         </div>
+        </>
       ) : (
         /* ── Units Mode: Pick units → see required economy ── */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-5">
             <UnitSelector units={data.units} />
             <TownCenterSelector />
             <PassiveGenerationSelector />
