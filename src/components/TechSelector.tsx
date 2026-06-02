@@ -31,16 +31,21 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
           const isActive = activeTechs.includes(id);
 
           return (
-            <button
-              key={id}
-              onClick={() => toggleTech(id)}
-              className={`flex items-center gap-2 p-1.5 pr-3 rounded border transition-all ${
-                isActive
-                  ? 'bg-[var(--civ-primary)] border-[var(--civ-primary)] text-white shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-              }`}
-              title={tech.name}
-            >
+              <button
+                key={id}
+                onClick={() => toggleTech(id)}
+                className={`flex items-center gap-2 p-1.5 pr-3 rounded border transition-all ${
+                  isActive
+                    ? 'bg-[var(--civ-primary)] border-[var(--civ-primary)] text-white shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+                title={`${tech.name}\nCost: ${[
+                  tech.costs?.food ? `${tech.costs.food}F` : '',
+                  tech.costs?.wood ? `${tech.costs.wood}W` : '',
+                  tech.costs?.gold ? `${tech.costs.gold}G` : '',
+                  tech.costs?.stone ? `${tech.costs.stone}S` : '',
+                ].filter(Boolean).join(' ')} | Time: ${tech.costs?.time || '?'}s\n${tech.description || ''}`}
+              >
               <img src={tech.icon} alt={tech.name} className="w-8 h-8 rounded-sm object-cover bg-slate-900" />
               <div className="flex flex-col items-start">
                 <span className="text-sm font-medium">{tech.name}</span>
