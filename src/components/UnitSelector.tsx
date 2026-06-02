@@ -7,12 +7,15 @@ import { CostDisplay } from './ResourceIcon';
 export const UnitSelector = ({ units }: { units: UnitData[] }) => {
   const { civ, age, mode, units: activeUnits, setUnitProduction } = useCalculatorStore();
 
-  // Filter available units for current civ and age
-  const availableUnits = units.filter(u => 
-    u.civs.includes(civ) && 
-    u.classes?.includes('military') &&
-    !u.classes?.includes('ship') &&
-    u.age <= age
+  // Filter available units for current civ and age, dedup by baseId (keep highest age)
+  const availableUnits = Object.values(
+    units
+      .filter(u => u.civs.includes(civ) && u.classes?.includes('military') && !u.classes?.includes('ship') && u.age <= age)
+      .reduce((acc, u) => {
+        const existing = acc[u.baseId];
+        if (!existing || u.age > existing.age) acc[u.baseId] = u;
+        return acc;
+      }, {} as Record<string, UnitData>)
   );
 
   // Group by production building loosely

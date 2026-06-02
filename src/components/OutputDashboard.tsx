@@ -31,12 +31,15 @@ const ResourceModeOutput = () => {
 
   const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
 
-  // Available military units for this civ/age
-  const availableUnits = allUnits.filter(u =>
-    u.civs.includes(civ) &&
-    u.classes?.includes('military') &&
-    !u.classes?.includes('ship') &&
-    u.age <= age
+  // Available military units for this civ/age, dedup by baseId (keep highest age)
+  const availableUnits = Object.values(
+    allUnits
+      .filter(u => u.civs.includes(civ) && u.classes?.includes('military') && !u.classes?.includes('ship') && u.age <= age)
+      .reduce((acc, u) => {
+        const existing = acc[u.baseId];
+        if (!existing || u.age > existing.age) acc[u.baseId] = u;
+        return acc;
+      }, {} as Record<string, UnitData>)
   );
 
   const maxProd = calculateMaxProduction(rpm, availableUnits, civ, ovooDoubleProduction);
