@@ -25,7 +25,7 @@ export const PassiveGenerationSelector = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <img src={GOLD_ICON} alt="Gold" className="w-5 h-5 object-contain" />
+                <img src={GOLD_ICON} alt="Gold" loading="lazy" className="w-5 h-5 object-contain" />
                 <span className="text-sm font-medium text-slate-700">Sacred Sites</span>
               </div>
               <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export const PassiveGenerationSelector = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src={STONE_ICON} alt="Stone" className="w-5 h-5 object-contain" />
+                  <img src={STONE_ICON} alt="Stone" loading="lazy" className="w-5 h-5 object-contain" />
                   <span className="text-sm font-medium text-slate-700">Ovoos</span>
                 </div>
                 <div className="flex items-center gap-2">

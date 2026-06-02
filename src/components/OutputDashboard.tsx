@@ -16,7 +16,7 @@ const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/
 
 export const OutputDashboard = () => {
   return (
-    <div className="sticky top-4 space-y-4">
+    <div className="space-y-3">
       <UnitsModeOutput />
     </div>
   );
@@ -108,7 +108,7 @@ export const MaxProductionGrid = () => {
               className="p-2 rounded flex flex-col items-center justify-center border border-slate-200 bg-white hover:border-[var(--civ-primary)] hover:bg-slate-50 transition-all"
               title={costs ? `${entry.unitName} — ${costs.food ? costs.food + 'F ' : ''}${costs.wood ? costs.wood + 'W ' : ''}${costs.gold ? costs.gold + 'G ' : ''}${'time' in costs && costs.time ? costs.time + 's' : ''}` : entry.unitName}
             >
-              <img src={entry.icon} alt={entry.unitName} className="w-8 h-8 rounded bg-slate-900 object-cover mb-1" />
+              <img src={entry.icon} alt={entry.unitName} loading="lazy" className="w-8 h-8 rounded bg-slate-900 object-cover mb-1" />
               <div className="font-bold text-[10px] text-center leading-tight text-slate-700 truncate w-full">{entry.unitName}</div>
               <div className="text-xs font-bold text-[var(--civ-primary)]">{entry.maxSustainable.toFixed(1)} <span className="text-[9px] font-normal text-slate-400">/min</span></div>
             </div>
@@ -153,7 +153,7 @@ export const RequiredVillagersBar = () => {
               { url: `${RESOURCE_BASE_URL}/stone.png`, label: 'Stone', count: required.stone },
             ].map(r => (
               <div key={r.label} className="flex items-center gap-1.5">
-                <img src={r.url} alt={r.label} className="w-4 h-4 object-contain" />
+                <img src={r.url} alt={r.label} loading="lazy" className="w-4 h-4 object-contain" />
                 <span className="text-sm font-semibold text-slate-700">{r.count}</span>
                 <span className="text-[10px] text-slate-400 uppercase">{r.label}</span>
               </div>
@@ -213,7 +213,7 @@ const UnitsModeOutput = () => {
                 <div key={pu.unitId} className="flex flex-col gap-1 text-sm border-b border-slate-50 pb-2 last:border-0">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <img src={uDef.icon} className="w-6 h-6 rounded bg-slate-900" alt={uDef.name} />
+                      <img src={uDef.icon} loading="lazy" className="w-6 h-6 rounded bg-slate-900" alt={uDef.name} />
                       <span className="font-medium text-slate-700">{uDef.name}</span>
                     </div>
                     <div className="font-bold text-slate-900">
@@ -307,7 +307,7 @@ const UnitsModeOutput = () => {
 
 const ResourceCard = ({ iconUrl, label, value }: { iconUrl: string; label: string; value: number }) => (
   <div className="flex items-center p-3 rounded bg-slate-50 border border-slate-100 gap-3">
-    <img src={iconUrl} alt={label} className="w-6 h-6 object-contain" />
+    <img src={iconUrl} alt={label} loading="lazy" className="w-6 h-6 object-contain" />
     <div>
       <div className="text-xs text-slate-500 font-medium uppercase">{label}</div>
       <div className={`text-xl font-bold ${value < 0 ? 'text-red-500' : 'text-slate-800'}`}>

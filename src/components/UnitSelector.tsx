@@ -104,7 +104,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
             return (
               <div key={au.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
                 <div className="flex items-center gap-3">
-                  <img src={unitDef.icon} alt={unitDef.name} className="w-10 h-10 rounded border border-slate-300 bg-slate-900" />
+                   <img src={unitDef.icon} alt={unitDef.name} loading="lazy" className="w-10 h-10 rounded border border-slate-300 bg-slate-900" />
                   <div>
                     <div className="font-bold text-slate-800">{unitDef.name}</div>
                     <div className="text-xs text-slate-500 capitalize mb-1">{getProdBuilding(unitDef).replace('-', ' ')}</div>
@@ -120,7 +120,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
                         className={`p-1.5 rounded-md transition-all border ${au.doubleProduced ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300'}`}
                         title={au.doubleProduced ? 'Double production active (costs stone)' : 'Enable double production'}
                       >
-                        <img src={STONE_ICON} alt="Ovoo" className="w-4 h-4 object-contain" />
+                        <img src={STONE_ICON} alt="Ovoo" loading="lazy" className="w-4 h-4 object-contain" />
                       </button>
                       {au.doubleProduced && (
                         <span className="text-[9px] font-bold text-amber-600 mt-0.5">2x</span>
