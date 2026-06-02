@@ -9,7 +9,7 @@ export const TownCenterSelector = () => {
   const maxTcs = age === 1 ? 1 : age === 2 ? 2 : age === 3 ? 3 : 4;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
           <Home className="w-5 h-5 text-[var(--civ-primary)]" />
