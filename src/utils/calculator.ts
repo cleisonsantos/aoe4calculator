@@ -402,7 +402,10 @@ export const calculateRequiredVillagers = (
   const foodVills = rates.food > 0 ? Math.ceil(foodDrain / rates.food) : 0;
   const woodVills = rates.wood > 0 ? Math.ceil(drain.wood / rates.wood) : 0;
   const goldVills = rates.gold > 0 ? Math.ceil(goldDrain / rates.gold) : 0;
-  const stoneVills = rates.stone > 0 ? Math.ceil(stoneDrain / rates.stone) : 0;
+
+  // Ovoo stone is passive income — it does not require villagers to gather
+  const hasOvoo = (civ === 'mo' || civ === 'gol') && !!ovooCount;
+  const stoneVills = hasOvoo ? 0 : rates.stone > 0 ? Math.ceil(stoneDrain / rates.stone) : 0;
 
   return {
     food: foodVills,

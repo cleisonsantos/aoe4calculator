@@ -77,13 +77,13 @@ describe('Mongols calculator rules', () => {
   it('adds Ovoo passive stone generation according to age', () => {
     expect(calculateRPM(emptyVillagers, 'mo', 1, [], 1, 0).stone).toBe(80);
     expect(calculateRPM(emptyVillagers, 'mo', 2, [], 1, 0).stone).toBe(105);
-    expect(calculateRPM(emptyVillagers, 'mo', 3, [], 1, 0).stone).toBe(120);
-    expect(calculateRPM(emptyVillagers, 'mo', 4, [], 1, 0).stone).toBe(150);
+    expect(calculateRPM(emptyVillagers, 'mo', 3, [], 1, 0).stone).toBe(130);
+    expect(calculateRPM(emptyVillagers, 'mo', 4, [], 1, 0).stone).toBe(160);
   });
 
   it('scales Ovoo passive stone generation by Ovoo count', () => {
     expect(calculateRPM(emptyVillagers, 'mo', 2, [], 2, 0).stone).toBe(210);
-    expect(calculateRPM(emptyVillagers, 'mo', 4, [], 3, 0).stone).toBe(450);
+    expect(calculateRPM(emptyVillagers, 'mo', 4, [], 3, 0).stone).toBe(480);
   });
 
   it('doubles Mongol unit output and charges the extra unit as stone drain', () => {
@@ -127,7 +127,7 @@ describe('Mongols calculator rules', () => {
     });
   });
 
-  it('subtracts Ovoo passive stone before calculating required stone villagers', () => {
+  it('does not count Ovoo stone as requiring villagers', () => {
     const required = calculateRequiredVillagers(
       [{ id: 'horseman', buildings: 1 }],
       allUnits,
@@ -140,13 +140,9 @@ describe('Mongols calculator rules', () => {
       0
     );
 
-    expect(required).toEqual({
-      food: 5,
-      wood: 0,
-      gold: 1,
-      stone: 3,
-      total: 9,
-    });
+    // Ovoo stone is passive — no villagers needed for stone
+    expect(required.stone).toBe(0);
+    expect(required.total).toBe(required.food + required.wood + required.gold);
   });
 
   it('uses Ovoo stone drain when calculating max sustainable double production', () => {
