@@ -77,7 +77,7 @@ export const MaxProductionGrid = () => {
     {
       unitId: 'villager',
       unitName: villagerUnit?.name || 'Villager',
-      icon: villagerUnit?.icon || '',
+      icon: villagerUnit?.icon || 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/food.png',
       maxSustainable: maxVillagersPerMin,
     },
   ].sort((a, b) => b.maxSustainable - a.maxSustainable);
@@ -138,8 +138,8 @@ export const RequiredVillagersBar = () => {
           <Users className="w-5 h-5 text-[var(--civ-primary)]" />
           <span className="font-bold text-slate-800">Required Villagers:</span>
         </div>
-        {activeUnits.length === 0 ? (
-          <span className="text-sm text-slate-400 italic">Select units to see the required economy.</span>
+        {activeUnits.length === 0 && tcProducingVillagers === 0 ? (
+          <span className="text-sm text-slate-400 italic">Select units or set TCs to see the required economy.</span>
         ) : (
           <>
             <div className="bg-[var(--civ-primary)]/10 border border-[var(--civ-primary)]/20 rounded-lg px-4 py-1.5">
@@ -165,6 +165,52 @@ export const RequiredVillagersBar = () => {
   );
 };
 
+export const ProductionSummary = () => {
+  const { civ, units: activeUnits } = useCalculatorStore();
+  const { units: allUnits } = useAoE4Data();
+
+  const { perUnit } = calculateProductionDrain(activeUnits, allUnits, civ);
+
+  if (activeUnits.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+      <h3 className="text-base font-bold mb-2 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
+        <Swords className="w-5 h-5 text-[var(--civ-primary)]" />
+        Production Summary
+      </h3>
+      <div className="space-y-3">
+        {perUnit.map(pu => {
+          const uDef = allUnits.find(u => u.id === pu.unitId && u.civs.includes(civ));
+          if (!uDef) return null;
+          return (
+            <div key={pu.unitId} className="flex flex-col gap-1 text-sm border-b border-slate-50 pb-2 last:border-0">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <img src={uDef.icon} loading="lazy" className="w-6 h-6 rounded bg-slate-900" alt={uDef.name} />
+                  <span className="font-medium text-slate-700">{uDef.name}</span>
+                </div>
+                <div className="font-bold text-slate-900">
+                  {pu.upm.toFixed(1)} / min
+                </div>
+              </div>
+              <div className="ml-8 flex items-center gap-3 text-xs text-slate-500">
+                <CostDisplay costs={uDef.costs} compact showTime />
+              </div>
+              <div className="ml-8 flex gap-2 text-[10px] text-slate-400">
+                {pu.drain.food > 0 && <span>Food: {Math.round(pu.drain.food)}/m</span>}
+                {pu.drain.wood > 0 && <span>Wood: {Math.round(pu.drain.wood)}/m</span>}
+                {pu.drain.gold > 0 && <span>Gold: {Math.round(pu.drain.gold)}/m</span>}
+                {pu.drain.stone > 0 && <span>Stone: {Math.round(pu.drain.stone)}/m</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const UnitsModeOutput = () => {
   const {
     civ, age, activeTechs,
@@ -180,10 +226,8 @@ const UnitsModeOutput = () => {
     tcProducingVillagers
   );
 
-  const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
+  const { total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
   
-  // Calculate RPM for villager production analysis based on REQUIRED villagers in Units Mode
-  // this ensures the analysis shows if the REQUIRED economy is sufficient
   const requiredVillagersAllocation = {
     food_sheep: 0, food_berries: 0, food_deer: 0, food_boar: 0,
     food_farms: required.food,
@@ -198,44 +242,6 @@ const UnitsModeOutput = () => {
 
   return (
     <>
-      {/* Production Summary */}
-      {activeUnits.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
-          <h3 className="text-base font-bold mb-2 text-slate-800 border-b pb-2 border-slate-100 flex items-center gap-2">
-            <Swords className="w-5 h-5 text-[var(--civ-primary)]" />
-            Production Summary
-          </h3>
-          <div className="space-y-3">
-            {perUnit.map(pu => {
-              const uDef = allUnits.find(u => u.id === pu.unitId && u.civs.includes(civ));
-              if (!uDef) return null;
-              return (
-                <div key={pu.unitId} className="flex flex-col gap-1 text-sm border-b border-slate-50 pb-2 last:border-0">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <img src={uDef.icon} loading="lazy" className="w-6 h-6 rounded bg-slate-900" alt={uDef.name} />
-                      <span className="font-medium text-slate-700">{uDef.name}</span>
-                    </div>
-                    <div className="font-bold text-slate-900">
-                      {pu.upm.toFixed(1)} / min
-                    </div>
-                  </div>
-                  <div className="ml-8 flex items-center gap-3 text-xs text-slate-500">
-                    <CostDisplay costs={uDef.costs} compact showTime />
-                  </div>
-                  <div className="ml-8 flex gap-2 text-[10px] text-slate-400">
-                    {pu.drain.food > 0 && <span>Food: {Math.round(pu.drain.food)}/m</span>}
-                    {pu.drain.wood > 0 && <span>Wood: {Math.round(pu.drain.wood)}/m</span>}
-                    {pu.drain.gold > 0 && <span>Gold: {Math.round(pu.drain.gold)}/m</span>}
-                    {pu.drain.stone > 0 && <span>Stone: {Math.round(pu.drain.stone)}/m</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Villager Production Analysis */}
       {activeUnits.length > 0 && tcProducingVillagers > 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">

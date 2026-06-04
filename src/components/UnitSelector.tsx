@@ -67,7 +67,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
 
       <div className="mb-8">
         <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Available Units</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
           {availableUnits.map(u => {
             const isActive = activeUnits.some(au => au.id === u.id);
             return (

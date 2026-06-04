@@ -3,7 +3,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
 import { CivSelector } from './CivSelector';
 import { VillagerAllocator } from './VillagerAllocator';
-import { OutputDashboard, RpmBar, MaxProductionGrid, RequiredVillagersBar } from './OutputDashboard';
+import { OutputDashboard, RpmBar, MaxProductionGrid, RequiredVillagersBar, ProductionSummary } from './OutputDashboard';
 import { TechSelector } from './TechSelector';
 import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
@@ -64,13 +64,13 @@ export const Calculator = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500 font-bold p-8 text-center flex-col">
         <p className="text-2xl mb-4">Error loading data.</p>
-        <p className="text-slate-600 font-normal">{data.error}</p>
+        <p className="text-slate-600 font-normal">Failed to load game data. Please try refreshing the page.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+    <div className="max-w-screen-2xl mx-auto p-4 md:p-6 space-y-4">
       
       <header className="flex items-center justify-between border-b-2 border-slate-200 pb-3">
         <div>
@@ -109,6 +109,7 @@ export const Calculator = () => {
           <RequiredVillagersBar />
           <div className="space-y-3">
             <UnitSelector units={data.units} />
+            <ProductionSummary />
             <TownCenterSelector />
             <PassiveGenerationSelector />
             <TechSelector techs={data.technologies} />
