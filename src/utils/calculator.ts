@@ -40,14 +40,16 @@ export const getVillagerStats = (
 };
 
 export const BASE_RATES = {
-  food_sheep: 40,
-  food_berries: 40,
-  food_deer: 45,
-  food_boar: 55,
-  food_farms: 40,
-  wood: 40,
-  gold: 40,
-  stone: 40,
+  food_sheep: 45,       // 0.75/s
+  food_berries: 41.4,   // 0.69/s (base; Abbasid/Ayyubid/Delhi: 0.8625/s)
+  food_deer: 49.5,      // 0.825/s
+  food_boar: 54,        // 0.9/s
+  food_farms: 45,       // 0.75/s
+  food_fish: 60,        // 1.0/s (villager shore fishing)
+  food_deep_fish: 45,   // 0.75/s (fishing boat deep sea)
+  wood: 45,             // 0.75/s
+  gold: 45,             // 0.75/s
+  stone: 45,            // 0.75/s
   oliveoil: 40,
   silver: 40,
 };
@@ -180,7 +182,9 @@ export const calculateRPM = (
     villagers.food_berries * BASE_RATES.food_berries +
     villagers.food_deer * BASE_RATES.food_deer +
     villagers.food_boar * BASE_RATES.food_boar +
-    villagers.food_farms * BASE_RATES.food_farms;
+    villagers.food_farms * BASE_RATES.food_farms +
+    villagers.food_fish * BASE_RATES.food_fish +
+    villagers.food_deep_fish * BASE_RATES.food_deep_fish;
 
   const wood_base = villagers.wood * BASE_RATES.wood;
   const gold_base = villagers.gold * BASE_RATES.gold;
@@ -194,8 +198,8 @@ export const calculateRPM = (
   if (civ === 'en') {
     const eng_farm_mult = age >= 4 ? 1.30 : age >= 3 ? 1.20 : 1.15;
     rpm.food += (villagers.food_farms * BASE_RATES.food_farms * eng_farm_mult) - (villagers.food_farms * BASE_RATES.food_farms);
-  } else if (civ === 'ab' || civ === 'de') {
-    const berry_mult = 1.30;
+  } else if (civ === 'ab' || civ === 'ay' || civ === 'de') {
+    const berry_mult = 1.25;
     rpm.food += (villagers.food_berries * BASE_RATES.food_berries * berry_mult) - (villagers.food_berries * BASE_RATES.food_berries);
   }
 

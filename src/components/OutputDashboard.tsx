@@ -138,8 +138,8 @@ export const RequiredVillagersBar = () => {
           <Users className="w-5 h-5 text-[var(--civ-primary)]" />
           <span className="font-bold text-slate-800">Required Villagers:</span>
         </div>
-        {activeUnits.length === 0 ? (
-          <span className="text-sm text-slate-400 italic">Select units to see the required economy.</span>
+        {activeUnits.length === 0 && tcProducingVillagers === 0 ? (
+          <span className="text-sm text-slate-400 italic">Select units or set TCs to see the required economy.</span>
         ) : (
           <>
             <div className="bg-[var(--civ-primary)]/10 border border-[var(--civ-primary)]/20 rounded-lg px-4 py-1.5">

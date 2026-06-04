@@ -6,6 +6,8 @@ export interface VillagerAllocation {
   food_deer: number;
   food_boar: number;
   food_farms: number;
+  food_fish: number;
+  food_deep_fish: number;
   wood: number;
   gold: number;
   stone: number;
@@ -55,6 +57,8 @@ const defaultVillagers: VillagerAllocation = {
   food_deer: 0,
   food_boar: 0,
   food_farms: 0,
+  food_fish: 0,
+  food_deep_fish: 0,
   wood: 0,
   gold: 0,
   stone: 0,
