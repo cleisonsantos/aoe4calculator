@@ -99,6 +99,8 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
             const unitDef = units.find(u => u.id === au.id && u.civs.includes(civ));
             if (!unitDef) return null;
 
+            const doubleStoneCost = (unitDef.costs.food || 0) + (unitDef.costs.wood || 0) + (unitDef.costs.gold || 0) + (unitDef.costs.stone || 0);
+
             return (
               <div key={au.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
                 <div className="flex items-center gap-3">
@@ -116,12 +118,12 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
                       <button
                         onClick={() => toggleDoubleProduction(au.id)}
                         className={`p-1.5 rounded-md transition-all border ${au.doubleProduced ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300'}`}
-                        title={au.doubleProduced ? 'Double production active (costs stone)' : 'Enable double production'}
+                        title={au.doubleProduced ? `Double production active: consumes ${doubleStoneCost} stone per unit` : 'Enable double production'}
                       >
                         <img src={STONE_ICON} alt="Ovoo" loading="lazy" className="w-4 h-4 object-contain" />
                       </button>
                       {au.doubleProduced && (
-                        <span className="text-[9px] font-bold text-amber-600 mt-0.5">2x</span>
+                        <span className="text-[9px] font-bold text-amber-600 mt-0.5">{doubleStoneCost}S</span>
                       )}
                     </div>
                   )}
