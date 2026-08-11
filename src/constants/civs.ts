@@ -25,6 +25,7 @@ export const CIVS: Civilization[] = [
   { id: 'hr', abbr: 'hre', slug: 'hre', name: 'Holy Roman Empire', theme: { primary: '#E8B800', secondary: '#1A1A1A' } },
   { id: 'hl', abbr: 'hol', slug: 'lancaster', name: 'House of Lancaster', theme: { primary: '#1E3A5F', secondary: '#CC2020' } },
   { id: 'ja', abbr: 'jap', slug: 'japanese', name: 'Japanese', theme: { primary: '#D4A843', secondary: '#F5F5F5' } },
+  { id: 'jin', abbr: 'jin', slug: 'jindynasty', name: 'Jin Dynasty', theme: { primary: '#1F1F1F', secondary: '#C9A84C' } },
   { id: 'je', abbr: 'jda', slug: 'jeannedarc', name: "Jeanne d'Arc", theme: { primary: '#D4A843', secondary: '#2E5CB8' } },
   { id: 'kt', abbr: 'kt', slug: 'templar', name: 'Knights Templar', theme: { primary: '#3A3A3A', secondary: '#CC2020' } },
   { id: 'mac', abbr: 'mac', slug: 'macedonian', name: 'Macedonian Dynasty', theme: { primary: '#CC2020', secondary: '#FFD700' } },
