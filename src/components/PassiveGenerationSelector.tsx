@@ -4,11 +4,13 @@ import { CopyPlus, Trophy } from 'lucide-react';
 
 const STONE_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/stone.png';
 const GOLD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/gold.png';
+const FOOD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/food.png';
 
 export const PassiveGenerationSelector = () => {
-  const { civ, mode, ovooCount, ovooDoubleProduction, sacredSites, setOvoo, setSacredSites } = useCalculatorStore();
+  const { civ, mode, ovooCount, ovooDoubleProduction, sacredSites, tributaries, setOvoo, setSacredSites, setTributaries } = useCalculatorStore();
 
   const isMongolVariant = civ === 'mo' || civ === 'gol';
+  const isJin = civ === 'jin';
 
   return (
     <div className="space-y-4">
