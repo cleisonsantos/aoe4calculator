@@ -85,6 +85,32 @@ export const PassiveGenerationSelector = () => {
               )}
             </div>
           )}
+
+          {/* Tributary States (Only for Jin Dynasty) */}
+          {isJin && (
+            <div className="space-y-4 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img src={FOOD_ICON} alt="Food" className="w-5 h-5 object-contain" />
+                  <span className="text-sm font-medium text-slate-700">Estados Tributários</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {[0, 1, 2, 3].map((count) => (
+                    <button
+                      key={count}
+                      onClick={() => setTributaries(count)}
+                      className={`w-8 h-8 rounded text-sm font-bold transition-colors ${tributaries === count ? 'bg-[var(--civ-primary)] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      {count}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="pt-2 text-xs text-slate-500">
+                Cada estado gera comida passiva (+60/min) e aumenta o limite de Mounted Villagers em +3.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

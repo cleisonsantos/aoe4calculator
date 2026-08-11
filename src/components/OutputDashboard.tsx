@@ -26,10 +26,10 @@ export const OutputDashboard = () => {
 // ── Resource Mode: show RPM + max sustainable production ──
 
 const ResourceModeOutput = () => {
-  const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites } = useCalculatorStore();
+  const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, tributaries } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites);
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries);
 
   // Available military units for this civ/age, dedup by baseId (keep highest age)
   const availableUnits = Object.values(
@@ -109,7 +109,7 @@ const UnitsModeOutput = () => {
   const {
     civ, age, activeTechs,
     units: activeUnits,
-    ovooCount, ovooDoubleProduction, sacredSites,
+    ovooCount, ovooDoubleProduction, sacredSites, tributaries,
     tcProducingVillagers, villagers
   } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
@@ -117,7 +117,7 @@ const UnitsModeOutput = () => {
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
     ovooCount, sacredSites,
-    tcProducingVillagers
+    tcProducingVillagers, tributaries
   );
 
   const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
@@ -133,7 +133,7 @@ const UnitsModeOutput = () => {
     oliveoil: 0,
     silver: 0
   };
-  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites);
+  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, tributaries);
   const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ);
 
   return (
@@ -244,7 +244,7 @@ const UnitsModeOutput = () => {
               }`}>
                 {villagerAnalysis.canProduceSimultaneously 
                   ? 'Can Produce Both Simultaneously' 
-                  : 'Food Conflict - Not Enough for Both'}
+                  : 'Resource Conflict - Not Enough for Both'}
               </span>
             </div>
             <p className={`text-sm ${
@@ -252,7 +252,9 @@ const UnitsModeOutput = () => {
             }`}>
               {villagerAnalysis.canProduceSimultaneously 
                 ? `Your economy can sustain both unit production and ${villagerAnalysis.villagerProductionRate} villagers/min`
-                : `You need ${Math.abs(villagerAnalysis.foodSurplus)} more food/min to sustain both`
+                : villagerAnalysis.goldSurplus < 0
+                  ? `You need ${Math.abs(villagerAnalysis.goldSurplus)} more gold/min to sustain both`
+                  : `You need ${Math.abs(villagerAnalysis.foodSurplus)} more food/min to sustain both`
               }
             </p>
           </div>
@@ -267,6 +269,9 @@ const UnitsModeOutput = () => {
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Drain (Vills)</div>
               <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.foodDrainFromVillagers} <span className="text-sm font-normal text-slate-500">/min</span></div>
               <div className="text-xs text-slate-500 mt-1">Dynamic villager cost based on civ</div>
+              {villagerAnalysis.goldDrainFromVillagers > 0 && (
+                <div className="text-xs font-medium text-amber-600 mt-1">+ {villagerAnalysis.goldDrainFromVillagers} gold/min</div>
+              )}
             </div>
             <div className="p-3 bg-slate-50 rounded border border-slate-100">
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Surplus</div>

@@ -1,9 +1,18 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
+import { useAoE4Data } from '../hooks/useAoE4Data';
+import { getVillagerStats } from '../utils/calculator';
 import { Home } from 'lucide-react';
 
 export const TownCenterSelector = () => {
-  const { tcProducingVillagers, setTcProducingVillagers, age } = useCalculatorStore();
+  const { tcProducingVillagers, setTcProducingVillagers, age, civ } = useCalculatorStore();
+  const { units: allUnits } = useAoE4Data();
+
+  // Villager stats are civ-specific (e.g., Jin's Mounted Villager: 65F + 50G, 35s)
+  const villagerStats = (allUnits?.length && civ)
+    ? getVillagerStats(allUnits, civ)
+    : { cost: 50, goldCost: 0, time: 20 };
+  const villagersPerMinutePerTc = 60 / villagerStats.time;
 
   // Max TCs available per age
   const maxTcs = age === 1 ? 1 : age === 2 ? 2 : age === 3 ? 3 : 4;
@@ -44,7 +53,10 @@ export const TownCenterSelector = () => {
       {tcProducingVillagers > 0 && (
         <div className="mt-4 p-3 bg-[var(--civ-primary)]/5 border border-[var(--civ-primary)]/20 rounded-md">
           <div className="text-xs text-slate-600 font-medium">
-            🏠 {tcProducingVillagers} TC producing {tcProducingVillagers === 1 ? 'villager' : 'villagers'} → ~{Math.round(tcProducingVillagers * 2.4)}/min
+            🏠 {tcProducingVillagers} TC producing {tcProducingVillagers === 1 ? 'villager' : 'villagers'} → ~{Math.round(tcProducingVillagers * villagersPerMinutePerTc * 10) / 10}/min
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Villager cost: {villagerStats.cost}F{villagerStats.goldCost > 0 ? ` + ${villagerStats.goldCost}G` : ''} · {villagerStats.time}s each
           </div>
         </div>
       )}

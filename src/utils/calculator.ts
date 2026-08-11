@@ -6,6 +6,7 @@ import { type ProductionUnit } from '../store/useCalculatorStore';
 
 export interface VillagerStats {
   cost: number; // food cost
+  goldCost: number; // gold cost (e.g., 50 for the Jin Mounted Villager)
   time: number; // training time in seconds
 }
 
@@ -15,19 +16,27 @@ export interface VillagerStats {
  * 
  * The villager unit is identified by having "villager" in its classes array.
  * Different civilizations may have different villager units (e.g., "gilded-villager" for Order of the Dragon).
+ * Some civs expose MULTIPLE units with the "villager" class (Jin: mounted-villager-1 AND villager-1) —
+ * in that case prioritize the "mounted_villager" class so the Mounted Villager is used as the
+ * civ's economic villager.
  */
 export const getVillagerStats = (
   allUnits: UnitData[],
   civ: string
 ): VillagerStats => {
-  // Find the villager unit for this civilization
-  const villagerUnit = allUnits.find(
+  const civVillagers = allUnits.filter(
     u => u.civs.includes(civ) && u.classes?.includes('villager')
   );
+
+  // Civs with multiple villager units: prefer the mounted villager (Jin)
+  const villagerUnit =
+    civVillagers.find(u => u.classes?.includes('mounted_villager')) ??
+    civVillagers[0];
 
   if (villagerUnit) {
     return {
       cost: villagerUnit.costs.food || 50,
+      goldCost: villagerUnit.costs.gold || 0,
       time: villagerUnit.costs.time || 20,
     };
   }
@@ -35,9 +44,29 @@ export const getVillagerStats = (
   // Fallback to defaults if not found
   return {
     cost: 50,
+    goldCost: 0,
     time: 20,
   };
 };
+
+// ── Jin Dynasty constants ──
+
+/**
+ * Mounted Villager gather multiplier (Jin Dynasty).
+ * Source: Age of Empires Series Wiki (Mounted Villager) — "gather 120% faster and carry 5
+ * additional resources from all resource types, except from Farms, from which they only gather
+ * 90% faster". Farms have no walk/return component, so the 90% (= 1.9x) figure is the raw work
+ * rate multiplier; the 120% figure is the all-in throughput gain (extra carry capacity + higher
+ * move speed 1.42 vs 1.12). BASE_RATES here are raw work rates, so 1.9x applies.
+ */
+export const MOUNTED_VILLAGER_GATHER_MULT = 1.9;
+
+/**
+ * Passive food generated per Tributary State (Jin Dynasty), food per minute.
+ * In-game each state spawns up to 8 Tributary Farms + Peasants that trickle food continuously,
+ * ramping over ~4 minutes; a flat per-minute rate is used here as a simplification.
+ */
+export const TRIBUTARY_FOOD_RATE = 60;
 
 export const BASE_RATES = {
   food_sheep: 40,
@@ -152,6 +181,16 @@ export const getEffectiveRates = (
     silverRate *= 1.28;
   }
 
+  // Jin Dynasty: Mounted Villagers gather resources faster than regular villagers
+  if (civ === 'jin') {
+    foodRate *= MOUNTED_VILLAGER_GATHER_MULT;
+    woodRate *= MOUNTED_VILLAGER_GATHER_MULT;
+    goldRate *= MOUNTED_VILLAGER_GATHER_MULT;
+    stoneRate *= MOUNTED_VILLAGER_GATHER_MULT;
+    oliveoilRate *= MOUNTED_VILLAGER_GATHER_MULT;
+    silverRate *= MOUNTED_VILLAGER_GATHER_MULT;
+  }
+
   return { food: foodRate, wood: woodRate, gold: goldRate, stone: stoneRate, oliveoil: oliveoilRate, silver: silverRate };
 };
 
@@ -163,7 +202,8 @@ export const calculateRPM = (
   age: number,
   activeTechs: string[],
   ovooCount?: number,
-  sacredSites?: number
+  sacredSites?: number,
+  tributaries?: number
 ): ResourceSet => {
   let rpm: ResourceSet = {
     food: 0,
@@ -216,6 +256,16 @@ export const calculateRPM = (
     silver_with_techs *= 1.28;
   }
 
+  // Jin Dynasty: Mounted Villagers gather resources faster than regular villagers
+  if (civ === 'jin') {
+    food_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+    wood_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+    gold_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+    stone_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+    oliveoil_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+    silver_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+  }
+
   rpm.food += food_with_techs;
   rpm.wood += wood_with_techs;
   rpm.gold += gold_with_techs;
@@ -226,6 +276,11 @@ export const calculateRPM = (
   if ((civ === 'mo' || civ === 'gol') && ovooCount && ovooCount > 0) {
     const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 130 : 160;
     rpm.stone += ovooRate * ovooCount;
+  }
+
+  // Jin Dynasty: Tributary States generate passive food
+  if (civ === 'jin' && tributaries && tributaries > 0) {
+    rpm.food += TRIBUTARY_FOOD_RATE * tributaries;
   }
 
   if (sacredSites && sacredSites > 0) {
@@ -370,7 +425,8 @@ export const calculateRequiredVillagers = (
   activeTechs: string[],
   ovooCount?: number,
   sacredSites?: number,
-  tcProducingVillagers: number = 0
+  tcProducingVillagers: number = 0,
+  tributaries?: number
 ): RequiredVillagers => {
   const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ);
   const rates = getEffectiveRates(civ, age, activeTechs);
@@ -378,13 +434,16 @@ export const calculateRequiredVillagers = (
   // Get villager stats dynamically from API data
   const villagerStats = getVillagerStats(allUnits, civ);
   const VILLAGER_FOOD_COST = villagerStats.cost;
+  const VILLAGER_GOLD_COST = villagerStats.goldCost;
   const VILLAGER_TIME = villagerStats.time;
   const villagersPerMinutePerTc = 60 / VILLAGER_TIME;
   const villagerFoodDrain = tcProducingVillagers * villagersPerMinutePerTc * VILLAGER_FOOD_COST;
+  // Jin Mounted Villagers also cost gold (65F + 50G)
+  const villagerGoldDrain = tcProducingVillagers * villagersPerMinutePerTc * VILLAGER_GOLD_COST;
 
   // Subtract passive generation before calculating villagers
   let foodDrain = drain.food + villagerFoodDrain;
-  let goldDrain = drain.gold;
+  let goldDrain = drain.gold + villagerGoldDrain;
   let stoneDrain = drain.stone;
 
   if (sacredSites && sacredSites > 0) {
@@ -395,6 +454,11 @@ export const calculateRequiredVillagers = (
   if ((civ === 'mo' || civ === 'gol') && ovooCount && ovooCount > 0) {
     const ovooRate = age === 1 ? 80 : age === 2 ? 105 : age === 3 ? 130 : 160;
     stoneDrain = Math.max(0, stoneDrain - ovooRate * ovooCount);
+  }
+
+  // Jin Dynasty: Tributary States generate passive food — no villagers needed for that part
+  if (civ === 'jin' && tributaries && tributaries > 0) {
+    foodDrain = Math.max(0, foodDrain - TRIBUTARY_FOOD_RATE * tributaries);
   }
 
   const foodVills = rates.food > 0 ? Math.ceil(foodDrain / rates.food) : 0;
@@ -420,8 +484,10 @@ export interface VillagerProductionAnalysis {
   tcProducingVillagers: number;
   villagerProductionRate: number; // villagers per minute
   foodDrainFromVillagers: number; // food per minute consumed by villager production
+  goldDrainFromVillagers: number; // gold per minute consumed by villager production (Jin Mounted Villager)
   canProduceSimultaneously: boolean;
   foodSurplus: number; // positive = can sustain both, negative = conflict
+  goldSurplus: number; // gold surplus after unit + villager production (Jin)
   maxTcForCurrentFood: number; // max TCs that can produce villagers with current food surplus
 }
 
@@ -435,9 +501,10 @@ export const calculateVillagerProduction = (
   // Get villager stats dynamically from API data
   const villagerStats = (allUnits && civ) 
     ? getVillagerStats(allUnits, civ)
-    : { cost: 50, time: 20 };
+    : { cost: 50, goldCost: 0, time: 20 };
   
   const VILLAGER_FOOD_COST = villagerStats.cost;
+  const VILLAGER_GOLD_COST = villagerStats.goldCost;
   const VILLAGER_TIME = villagerStats.time;
   
   // Calculate villager production rate per TC (villagers per minute)
@@ -449,26 +516,44 @@ export const calculateVillagerProduction = (
   // Food drain from villager production
   const foodDrainFromVillagers = totalVillagerRate * VILLAGER_FOOD_COST;
   
-  // Calculate food surplus after unit production and villager production
+  // Gold drain from villager production (Jin Mounted Villagers cost gold)
+  const goldDrainFromVillagers = totalVillagerRate * VILLAGER_GOLD_COST;
+  
+  // Calculate food/gold surplus after unit production and villager production
   const foodAvailable = rpm.food;
   const foodUsedByUnits = unitDrain.food;
   const foodSurplus = foodAvailable - foodUsedByUnits - foodDrainFromVillagers;
   
-  // Can produce simultaneously if we have enough food for both
-  const canProduceSimultaneously = foodSurplus >= 0;
+  const goldAvailable = rpm.gold;
+  const goldUsedByUnits = unitDrain.gold;
+  const goldSurplus = goldAvailable - goldUsedByUnits - goldDrainFromVillagers;
+  
+  // Can produce simultaneously if we have enough food AND gold for both
+  const canProduceSimultaneously = foodSurplus >= 0 && goldSurplus >= 0;
   
   // Calculate max TCs that can produce villagers with current food surplus
   const foodAfterUnits = foodAvailable - foodUsedByUnits;
-  const maxTcForCurrentFood = foodAfterUnits > 0 
+  const maxTcByFood = foodAfterUnits > 0 
     ? Math.floor(foodAfterUnits / (villagersPerMinutePerTc * VILLAGER_FOOD_COST))
     : 0;
+
+  // Jin Mounted Villagers also drain gold — TCs are limited by gold as well
+  const goldAfterUnits = goldAvailable - goldUsedByUnits;
+  const maxTcByGold = VILLAGER_GOLD_COST > 0
+    ? (goldAfterUnits > 0
+        ? Math.floor(goldAfterUnits / (villagersPerMinutePerTc * VILLAGER_GOLD_COST))
+        : 0)
+    : Infinity;
+  const maxTcForCurrentFood = Math.min(maxTcByFood, maxTcByGold);
   
   return {
     tcProducingVillagers,
     villagerProductionRate: Math.round(totalVillagerRate * 10) / 10,
     foodDrainFromVillagers: Math.round(foodDrainFromVillagers),
+    goldDrainFromVillagers: Math.round(goldDrainFromVillagers),
     canProduceSimultaneously,
     foodSurplus: Math.round(foodSurplus),
+    goldSurplus: Math.round(goldSurplus),
     maxTcForCurrentFood,
   };
 };

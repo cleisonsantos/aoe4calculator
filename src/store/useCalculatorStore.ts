@@ -31,6 +31,7 @@ interface CalculatorState {
   ovooCount: number; // For Mongols/Golden Horde
   ovooDoubleProduction: boolean; // For Mongols/Golden Horde
   sacredSites: number;
+  tributaries: number; // For Jin Dynasty (Tributary States, 0-3)
   tcProducingVillagers: number; // Number of Town Centers producing villagers
 
   // Actions
@@ -43,6 +44,7 @@ interface CalculatorState {
   toggleDoubleProduction: (id: string) => void;
   setOvoo: (count: number, double: boolean) => void;
   setSacredSites: (count: number) => void;
+  setTributaries: (count: number) => void;
   setTcProducingVillagers: (count: number) => void;
   loadFromUrl: (query: string) => void;
 }
@@ -70,10 +72,11 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   ovooCount: 0,
   ovooDoubleProduction: false,
   sacredSites: 0,
+  tributaries: 0,
   tcProducingVillagers: 1, // Default: 1 TC producing villagers (starting TC)
 
   setMode: (mode) => set({ mode }),
-  setCiv: (civ) => set({ civ, activeTechs: [], units: [], sacredSites: 0, ovooCount: 0, ovooDoubleProduction: false }), // Reset on civ change
+  setCiv: (civ) => set({ civ, activeTechs: [], units: [], sacredSites: 0, ovooCount: 0, ovooDoubleProduction: false, tributaries: 0 }), // Reset on civ change
   setAge: (age) => set({ age }),
   setVillagers: (type, count) =>
     set((state) => ({ villagers: { ...state.villagers, [type]: count } })),
@@ -103,6 +106,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
     })),
   setOvoo: (count, double) => set({ ovooCount: count, ovooDoubleProduction: double }),
   setSacredSites: (count) => set({ sacredSites: count }),
+  setTributaries: (count) => set({ tributaries: count }),
   setTcProducingVillagers: (count) => set({ tcProducingVillagers: count }),
   
   loadFromUrl: (query: string) => {
@@ -121,6 +125,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
       const ovooCount = parseInt(params.get('oc') || '0', 10);
       const ovooDoubleProduction = params.get('od') === 'true';
       const sacredSites = parseInt(params.get('ss') || '0', 10);
+      const tributaries = Math.max(0, Math.min(3, parseInt(params.get('tb') || '0', 10) || 0));
       const tcProducingVillagers = params.get('tc') ? parseInt(params.get('tc')!, 10) : 1; // Default to 1 if not specified
 
       const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
@@ -138,7 +143,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
           })
         : [];
 
-      set({ mode, civ, age, villagers, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, tcProducingVillagers });
+      set({ mode, civ, age, villagers, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, tributaries, tcProducingVillagers });
     } catch (e) {
       console.error("Failed to parse URL params", e);
     }
