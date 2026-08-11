@@ -68,6 +68,12 @@ export const MOUNTED_VILLAGER_GATHER_MULT = 1.9;
  */
 export const TRIBUTARY_FOOD_RATE = 60;
 
+/**
+ * Fallback training time (seconds) for units whose costs.time is missing from the live API
+ * (e.g., horseman, iron pagoda, mohe tribesman, scout). Without it, 60 / undefined = NaN.
+ */
+export const DEFAULT_UNIT_TRAIN_TIME = 30;
+
 export const BASE_RATES = {
   food_sheep: 40,
   food_berries: 40,
@@ -318,7 +324,7 @@ export const calculateProductionDrain = (
     const uDef = allUnits.find(u => u.id === au.id && u.civs.includes(civ));
     if (!uDef) return;
 
-    const time = uDef.costs.time;
+    const time = uDef.costs.time || DEFAULT_UNIT_TRAIN_TIME;
     const foodCost = uDef.costs.food || 0;
     const woodCost = uDef.costs.wood || 0;
     const goldCost = uDef.costs.gold || 0;
@@ -366,7 +372,7 @@ export const calculateMaxProduction = (
   ovooDoubleProduction: boolean
 ): MaxProductionEntry[] => {
   return availableUnits.map(u => {
-    const time = u.costs.time;
+    const time = u.costs.time || DEFAULT_UNIT_TRAIN_TIME;
     const foodCost = u.costs.food || 0;
     const woodCost = u.costs.wood || 0;
     const goldCost = u.costs.gold || 0;

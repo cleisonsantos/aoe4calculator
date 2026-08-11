@@ -218,4 +218,32 @@ describe('Jin Dynasty calculator rules', () => {
     // Regular English villager cost/time
     expect(getVillagerStats(allUnits, 'en').time).toBe(20);
   });
+
+  it('handles units missing costs.time from the live API (no NaN)', () => {
+    // horseman-2 in the live API has no costs.time (60 / undefined = NaN)
+    const noTimeHorseman: UnitData = {
+      id: 'horseman-2',
+      baseId: 'horseman',
+      name: 'Horseman',
+      civs: ['jin', 'en'],
+      costs: { food: 75, wood: 20, gold: 0, stone: 0 } as any, // no time field
+      producedBy: ['stable'],
+      icon: '',
+      classes: ['military'],
+      age: 2,
+    };
+
+    const required = calculateRequiredVillagers(
+      [{ id: 'horseman-2', buildings: 1 }],
+      [noTimeHorseman, regularVillager, mountedVillager],
+      'jin',
+      2,
+      []
+    );
+
+    expect(Number.isNaN(required.food)).toBe(false);
+    expect(Number.isNaN(required.gold)).toBe(false);
+    expect(Number.isNaN(required.total)).toBe(false);
+    expect(required.total).toBeGreaterThan(0);
+  });
 });
