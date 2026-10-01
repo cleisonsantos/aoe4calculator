@@ -22,9 +22,16 @@ export interface UnitData {
   icon: string;
   classes?: string[];
   age: number;
+  description?: string;
+  hitpoints?: number;
+  armor?: { type: string; value: number }[];
+  weapons?: { name: string; type: string; damage: number; range?: { min: number; max: number } }[];
+  movement?: { speed: number };
 }
 
 export interface TechData {
+  age?: number;
+  description?: string;
   id: string;
   baseId: string;
   name: string;
@@ -42,6 +49,23 @@ export interface TechData {
     type: string; // 'gatherRate', 'hitpoints', etc.
   }[];
 }
+
+export interface BuildingData {
+  id: string;
+  baseId: string;
+  name: string;
+  civs: string[];
+  costs: Cost;
+  age: number;
+  icon: string;
+}
+
+export const fetchBuildings = async (): Promise<BuildingData[]> => {
+  const res = await fetch('https://data.aoe4world.com/buildings/all.json');
+  if (!res.ok) throw new Error('Failed to fetch buildings');
+  const data = await res.json();
+  return Array.isArray(data.data) ? data.data : [];
+};
 
 export const fetchUnits = async (): Promise<UnitData[]> => {
   const res = await fetch('https://data.aoe4world.com/units/all.json');
