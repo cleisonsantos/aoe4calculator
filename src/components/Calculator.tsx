@@ -3,7 +3,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
 import { CivSelector } from './CivSelector';
 import { VillagerAllocator } from './VillagerAllocator';
-import { OutputDashboard } from './OutputDashboard';
+import { OutputDashboard, RpmBar, MaxProductionGrid, RequiredVillagersBar, ProductionSummary } from './OutputDashboard';
 import { TechSelector } from './TechSelector';
 import { UnitSelector } from './UnitSelector';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
@@ -38,13 +38,14 @@ export const Calculator = () => {
         });
         if (state.villagerType === 'mounted') params.set('vt', 'mounted');
         if (state.tributaryFoodRate > 0) params.set('tfr', state.tributaryFoodRate.toString());
+        if (state.tributaries > 0) params.set('tb', state.tributaries.toString());
       }
 
       if (state.activeTechs.length > 0) params.set('techs', state.activeTechs.join(','));
       if (state.ovooCount > 0) params.set('oc', state.ovooCount.toString());
       if (state.ovooDoubleProduction) params.set('od', 'true');
       if (state.sacredSites > 0) params.set('ss', state.sacredSites.toString());
-      if (state.tributaries > 0) params.set('tb', state.tributaries.toString());
+      if (state.relics > 0) params.set('rl', state.relics.toString());
       params.set('tc', state.tcProducingVillagers.toString());
 
       if (state.units.length > 0) {
@@ -71,15 +72,15 @@ export const Calculator = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500 font-bold p-8 text-center flex-col">
         <p className="text-2xl mb-4">Error loading data.</p>
-        <p className="text-slate-600 font-normal">{data.error}</p>
+        <p className="text-slate-600 font-normal">Failed to load game data. Please try refreshing the page.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+    <div className="max-w-screen-2xl mx-auto p-4 md:p-6 space-y-4">
       
-      <header className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
+      <header className="flex items-center justify-between border-b-2 border-slate-200 pb-3">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">AoE4 <span className="text-[var(--civ-primary)]">Calculator</span></h1>
           <p className="text-slate-500 mt-1 text-sm font-medium">Dynamic Production & Timing Engine</p>
@@ -89,36 +90,40 @@ export const Calculator = () => {
 
       <CivSelector />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pb-2">
         <ModeToggle />
         <AgeSelector />
       </div>
 
       {mode === 'resource' ? (
         /* ── Resource Mode: Villagers → see what you can produce ── */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <>
+          <RpmBar />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-3 space-y-3">
             <VillagerAllocator />
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+              <MaxProductionGrid />
+            </div>
             <PassiveGenerationSelector />
+            <TownCenterSelector />
             <TechSelector techs={data.technologies} />
           </div>
-          <div className="lg:col-span-1">
-            <OutputDashboard />
-          </div>
         </div>
+        </>
       ) : (
         /* ── Units Mode: Pick units → see required economy ── */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <>
+          <RequiredVillagersBar />
+          <div className="space-y-3">
             <UnitSelector units={data.units} />
+            <ProductionSummary />
             <TownCenterSelector />
             <PassiveGenerationSelector />
             <TechSelector techs={data.technologies} />
-          </div>
-          <div className="lg:col-span-1">
             <OutputDashboard />
           </div>
-        </div>
+        </>
       )}
       
     </div>

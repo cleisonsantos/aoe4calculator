@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
-import { CopyPlus, Trophy } from 'lucide-react';
+import { CopyPlus, Trophy, Church } from 'lucide-react';
 import { TRIBUTARY_MIN_AGE } from '../utils/calculator';
 
 const STONE_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/stone.png';
@@ -8,7 +8,7 @@ const GOLD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/ass
 const FOOD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/food.png';
 
 export const PassiveGenerationSelector = () => {
-  const { civ, age, mode, ovooCount, ovooDoubleProduction, sacredSites, tributaries, tributaryFoodRate, setTributaryFoodRate, setOvoo, setSacredSites, setTributaries } = useCalculatorStore();
+  const { civ, age, mode, ovooCount, ovooDoubleProduction, sacredSites, relics, setRelics, tributaries, tributaryFoodRate, setTributaryFoodRate, setOvoo, setSacredSites, setTributaries } = useCalculatorStore();
 
   const isMongolVariant = civ === 'mo' || civ === 'gol';
   const isJin = civ === 'jin';
@@ -23,7 +23,7 @@ export const PassiveGenerationSelector = () => {
           </h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Sacred Sites */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -45,6 +45,26 @@ export const PassiveGenerationSelector = () => {
             </div>
           </div>
 
+          {/* Relics */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Church className="w-5 h-5 text-amber-700" />
+                <span className="text-sm font-medium text-slate-700">Relics</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {[0, 1, 2, 3, 4, 5].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setRelics(count)}
+                    className={`w-8 h-8 rounded text-sm font-bold transition-colors ${relics === count ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
           {/* Ovoos (Only for Mongols/Golden Horde) */}
           {isMongolVariant && (
             <div className="space-y-4 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">

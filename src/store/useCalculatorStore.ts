@@ -7,6 +7,8 @@ export interface VillagerAllocation {
   food_deer: number;
   food_boar: number;
   food_farms: number;
+  food_fish: number;
+  food_deep_fish: number;
   wood: number;
   gold: number;
   stone: number;
@@ -35,6 +37,7 @@ interface CalculatorState {
   ovooCount: number; // For Mongols/Golden Horde
   ovooDoubleProduction: boolean; // For Mongols/Golden Horde
   sacredSites: number;
+  relics: number;
   tributaries: number; // For Jin Dynasty (Tributary States, 0-3)
   tcProducingVillagers: number; // Number of Town Centers producing villagers
 
@@ -51,6 +54,7 @@ interface CalculatorState {
   toggleDoubleProduction: (id: string) => void;
   setOvoo: (count: number, double: boolean) => void;
   setSacredSites: (count: number) => void;
+  setRelics: (count: number) => void;
   setTributaries: (count: number) => void;
   setTcProducingVillagers: (count: number) => void;
   loadFromUrl: (query: string) => void;
@@ -62,6 +66,8 @@ const defaultVillagers: VillagerAllocation = {
   food_deer: 0,
   food_boar: 0,
   food_farms: 0,
+  food_fish: 0,
+  food_deep_fish: 0,
   wood: 0,
   gold: 0,
   stone: 0,
@@ -82,11 +88,12 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   ovooCount: 0,
   ovooDoubleProduction: false,
   sacredSites: 0,
+  relics: 0,
   tributaries: 0,
   tcProducingVillagers: 1, // Default: 1 TC producing villagers (starting TC)
 
   setMode: (mode) => set({ mode }),
-  setCiv: (civ) => set({ civ, activeTechs: [], units: [], sacredSites: 0, ovooCount: 0, ovooDoubleProduction: false, tributaries: 0, mountedVillagers: normalizeMountedVillagers({}, 1), villagerType: 'regular', tributaryFoodRate: 0 }), // Reset on civ change
+  setCiv: (civ) => set({ civ, activeTechs: [], units: [], sacredSites: 0, relics: 0, ovooCount: 0, ovooDoubleProduction: false, tributaries: 0, mountedVillagers: normalizeMountedVillagers({}, 1), villagerType: 'regular', tributaryFoodRate: 0 }), // Reset on civ change
   setAge: (age) => set((state) => {
     const tributaries = getTributaryCount(state.civ, age, state.tributaries);
     return { age, tributaries, mountedVillagers: normalizeMountedVillagers(state.mountedVillagers, age, tributaries) };
@@ -94,6 +101,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   setVillagers: (type, count) =>
     set((state) => ({ villagers: { ...state.villagers, [type]: count } })),
   setMountedVillagers: (type, count) => set((state) => {
+    if (type === 'food_deep_fish') return {};
     const otherCount = Object.entries(state.mountedVillagers)
       .reduce((total, [key, value]) => total + (key === type ? 0 : value), 0);
     const limit = getMountedVillagerLimit(state.age, state.tributaries);
@@ -130,6 +138,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
     })),
   setOvoo: (count, double) => set({ ovooCount: count, ovooDoubleProduction: double }),
   setSacredSites: (count) => set({ sacredSites: count }),
+  setRelics: (count) => set({ relics: count }),
   setTributaries: (count) => set((state) => {
     const tributaries = getTributaryCount(state.civ, state.age, count);
     return { tributaries, mountedVillagers: normalizeMountedVillagers(state.mountedVillagers, state.age, tributaries) };
@@ -140,18 +149,19 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
     try {
       const params = new URLSearchParams(query);
       const civ = params.get('civ') || 'en';
-      const age = parseInt(params.get('age') || '1', 10);
+      const age = Math.max(1, Math.min(4, parseInt(params.get('age') || '1', 10) || 1));
       
       const villagers = { ...defaultVillagers };
       Object.keys(defaultVillagers).forEach((k) => {
         const val = params.get(k);
-        if (val) villagers[k as keyof VillagerAllocation] = parseInt(val, 10);
+        if (val) villagers[k as keyof VillagerAllocation] = Math.max(0, Math.min(200, parseInt(val, 10) || 0));
       });
       
       const techs = params.get('techs') ? params.get('techs')!.split(',') : [];
-      const ovooCount = parseInt(params.get('oc') || '0', 10);
+      const ovooCount = Math.max(0, Math.min(3, parseInt(params.get('oc') || '0', 10) || 0));
       const ovooDoubleProduction = params.get('od') === 'true';
-      const sacredSites = parseInt(params.get('ss') || '0', 10);
+      const sacredSites = Math.max(0, Math.min(3, parseInt(params.get('ss') || '0', 10) || 0));
+      const relics = Math.max(0, Math.min(5, parseInt(params.get('rl') || '0', 10) || 0));
       const tributaries = getTributaryCount(civ, age, Number(params.get('tb') || 0));
       const rawTributaryFoodRate = Number(params.get('tfr') || 0);
       const tributaryFoodRate = civ === 'jin' && Number.isFinite(rawTributaryFoodRate)
@@ -162,7 +172,9 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
           .map(key => [key, Number(params.get(`mv_${key}`) || 0)])) : {},
         age, tributaries
       );
-      const tcProducingVillagers = params.get('tc') ? parseInt(params.get('tc')!, 10) : 1; // Default to 1 if not specified
+      const rawTc = Number(params.get('tc') ?? 1);
+      const tcProducingVillagers = Number.isFinite(rawTc)
+        ? Math.max(0, Math.min(age === 1 ? 1 : 10, Math.floor(rawTc))) : 1;
 
       const mode = (params.get('mode') === 'resource' ? 'resource' : 'unit') as CalculatorMode;
 
@@ -173,15 +185,15 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
             const segs = part.split(':');
             return {
               id: segs[0],
-              buildings: parseInt(segs[1] || '1', 10),
+              buildings: Math.max(1, Math.min(999, parseInt(segs[1] || '1', 10) || 1)),
               doubleProduced: segs[2] === 'd',
             };
           })
         : [];
 
-      set({ mode, civ, age, villagers, mountedVillagers, villagerType, tributaryFoodRate, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, tributaries, tcProducingVillagers });
+      set({ mode, civ, age, villagers, mountedVillagers, villagerType, tributaryFoodRate, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, relics, tributaries, tcProducingVillagers });
     } catch (e) {
-      console.error("Failed to parse URL params", e);
+      if (import.meta.env.DEV) console.error("Failed to parse URL params", e);
     }
   }
 }));

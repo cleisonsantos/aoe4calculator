@@ -34,7 +34,7 @@ export const normalizeMountedVillagers = (
 ): VillagerAllocation => {
   let remaining = getMountedVillagerLimit(age, tributaries);
   return Object.fromEntries(Object.keys(BASE_RATES).map(key => {
-    const value = allocation[key as keyof VillagerAllocation] ?? 0;
+    const value = key === 'food_deep_fish' ? 0 : allocation[key as keyof VillagerAllocation] ?? 0;
     const count = Number.isFinite(value) ? Math.min(remaining, Math.max(0, Math.floor(value))) : 0;
     remaining -= count;
     return [key, count];
@@ -92,14 +92,16 @@ export const MOUNTED_VILLAGER_GATHER_MULT = 2.2;
 export const MOUNTED_VILLAGER_FARM_MULT = 1.9;
 
 export const BASE_RATES = {
-  food_sheep: 40,
-  food_berries: 40,
-  food_deer: 45,
-  food_boar: 55,
-  food_farms: 40,
-  wood: 40,
-  gold: 40,
-  stone: 40,
+  food_sheep: 45,       // 0.75/s
+  food_berries: 41.4,   // 0.69/s
+  food_deer: 49.5,      // 0.825/s
+  food_boar: 54,        // 0.9/s
+  food_farms: 45,       // 0.75/s
+  food_fish: 60,        // villager shore fishing
+  food_deep_fish: 45,   // fishing boat deep sea
+  wood: 45,
+  gold: 45,
+  stone: 45,
   oliveoil: 40,
   silver: 40,
 };
@@ -218,7 +220,8 @@ export const calculateRPM = (
   ovooCount?: number,
   sacredSites?: number,
   tributaries?: number,
-  jin: JinEconomy = {}
+  jin: JinEconomy = {},
+  relics = 0
 ): ResourceSet => {
   let rpm: ResourceSet = {
     food: 0,
@@ -234,7 +237,9 @@ export const calculateRPM = (
     villagers.food_berries * BASE_RATES.food_berries +
     villagers.food_deer * BASE_RATES.food_deer +
     villagers.food_boar * BASE_RATES.food_boar +
-    villagers.food_farms * BASE_RATES.food_farms;
+    villagers.food_farms * BASE_RATES.food_farms +
+    (villagers.food_fish ?? 0) * BASE_RATES.food_fish +
+    (villagers.food_deep_fish ?? 0) * BASE_RATES.food_deep_fish;
 
   const wood_base = villagers.wood * BASE_RATES.wood;
   const gold_base = villagers.gold * BASE_RATES.gold;
@@ -248,8 +253,8 @@ export const calculateRPM = (
   if (civ === 'en') {
     const eng_farm_mult = age >= 4 ? 1.30 : age >= 3 ? 1.20 : 1.15;
     rpm.food += (villagers.food_farms * BASE_RATES.food_farms * eng_farm_mult) - (villagers.food_farms * BASE_RATES.food_farms);
-  } else if (civ === 'ab' || civ === 'de') {
-    const berry_mult = 1.30;
+  } else if (civ === 'ab' || civ === 'ay' || civ === 'de') {
+    const berry_mult = 1.25;
     rpm.food += (villagers.food_berries * BASE_RATES.food_berries * berry_mult) - (villagers.food_berries * BASE_RATES.food_berries);
   }
 
@@ -280,7 +285,8 @@ export const calculateRPM = (
         mounted.food_deer * BASE_RATES.food_deer +
         mounted.food_boar * BASE_RATES.food_boar) * MOUNTED_VILLAGER_GATHER_MULT +
       mounted.food_farms * BASE_RATES.food_farms * MOUNTED_VILLAGER_FARM_MULT;
-    food_with_techs += mountedFood * m.food_mult;
+    // Shore fishing uses workers; deep-sea fishing uses boats, never mounted workers.
+    food_with_techs += (mountedFood + mounted.food_fish * BASE_RATES.food_fish * MOUNTED_VILLAGER_GATHER_MULT) * m.food_mult;
     wood_with_techs += mounted.wood * BASE_RATES.wood * MOUNTED_VILLAGER_GATHER_MULT * m.wood_mult;
     gold_with_techs += mounted.gold * BASE_RATES.gold * MOUNTED_VILLAGER_GATHER_MULT * m.gold_mult;
     stone_with_techs += mounted.stone * BASE_RATES.stone * MOUNTED_VILLAGER_GATHER_MULT * m.stone_mult;
@@ -302,6 +308,7 @@ export const calculateRPM = (
 
   // Jin Dynasty: Tributary States generate passive food
   rpm.food += getTributaryFood(civ, age, tributaries, jin.tributaryFoodRate);
+  if (relics > 0) rpm.gold += 100 * relics;
 
   if (sacredSites && sacredSites > 0) {
     const siteRate = civ === 'de' ? 150 : 100;
@@ -414,9 +421,11 @@ export const calculateMaxProduction = (
       unitId: u.id,
       unitName: u.name,
       icon: u.icon,
-      maxSustainable: maxSustainable === Infinity ? 999 : Math.max(0, maxSustainable),
+      maxSustainable: maxSustainable === Infinity
+        ? (u.costs.time && u.costs.time > 0 ? 60 / u.costs.time * upmMultiplier : 0)
+        : Math.max(0, maxSustainable),
     };
-  }).filter(e => e.maxSustainable > 0);
+  });
 };
 
 // ── Units Mode output: required villagers for desired production ──
@@ -440,7 +449,8 @@ export const calculateRequiredVillagers = (
   sacredSites?: number,
   tcProducingVillagers: number = 0,
   tributaries?: number,
-  jin: JinEconomy = {}
+  jin: JinEconomy = {},
+  relics = 0
 ): RequiredVillagers => {
   const { total: drain, missingTimeUnits } = calculateProductionDrain(activeUnits, allUnits, civ);
   const rates = getEffectiveRates(civ, age, activeTechs);
@@ -459,6 +469,7 @@ export const calculateRequiredVillagers = (
   let foodDrain = drain.food + villagerFoodDrain;
   let goldDrain = drain.gold + villagerGoldDrain;
   let stoneDrain = drain.stone;
+  if (relics > 0) goldDrain = Math.max(0, goldDrain - 100 * relics);
 
   if (sacredSites && sacredSites > 0) {
     const siteRate = civ === 'de' ? 150 : 100;

@@ -4,12 +4,17 @@ import { getMountedVillagerLimit } from '../utils/calculator';
 
 const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources';
 
-const icons: Record<keyof VAlloc, string> = {
-  food_sheep: `${RESOURCE_BASE_URL}/food.png`,
-  food_berries: `${RESOURCE_BASE_URL}/food.png`,
-  food_deer: `${RESOURCE_BASE_URL}/food.png`,
-  food_boar: `${RESOURCE_BASE_URL}/food.png`,
-  food_farms: `${RESOURCE_BASE_URL}/food.png`,
+const foodEmojis: Record<string, string> = {
+  food_sheep: '🐑',
+  food_berries: '🫐',
+  food_deer: '🦌',
+  food_boar: '🐗',
+  food_farms: '🌾',
+  food_fish: '🐟',
+  food_deep_fish: '🐋',
+};
+
+const resourceIcons: Record<string, string> = {
   wood: `${RESOURCE_BASE_URL}/wood.png`,
   gold: `${RESOURCE_BASE_URL}/gold.png`,
   stone: `${RESOURCE_BASE_URL}/stone.png`,
@@ -23,6 +28,8 @@ const labels: Record<keyof VAlloc, string> = {
   food_deer: 'Deer',
   food_boar: 'Boar',
   food_farms: 'Farms',
+  food_fish: 'Fish',
+  food_deep_fish: 'Deep Sea',
   wood: 'Wood',
   gold: 'Gold',
   stone: 'Stone',
@@ -37,18 +44,44 @@ export const VillagerAllocator = () => {
 
   const totalVills = Object.values(villagers).reduce((a, b) => a + b, 0) + (civ === 'jin' ? mountedTotal : 0);
 
-  const renderAllocator = (key: keyof VAlloc, showLabel = true) => (
+  const renderAllocator = (key: keyof VAlloc) => {
+    const isFood = key.startsWith('food_');
+    const emoji = foodEmojis[key as keyof typeof foodEmojis];
+
+    return (
     <div key={key} className="flex flex-col gap-2 p-2 bg-slate-50 rounded-md border border-slate-100">
       <div className="flex items-center gap-2">
-        <img 
-          src={icons[key]} 
-          alt={labels[key]} 
-          className="w-5 h-5 object-contain"
-        />
-        <span className="text-xs font-bold text-slate-700">{labels[key]}</span>
+        {isFood ? (
+          <span className="text-lg leading-none">{emoji}</span>
+        ) : (
+          <img
+            src={resourceIcons[key]}
+            alt={labels[key]}
+            className="w-5 h-5 object-contain"
+          />
+        )}
+        <span className="text-xs font-bold text-slate-700 whitespace-nowrap">{labels[key]}</span>
       </div>
-      {civ === 'jin' && (
-        <label className="flex items-center gap-2 text-xs text-slate-500">
+
+      <div className="flex items-center">
+        {civ === 'jin' && <span className="text-xs text-slate-500 mr-1">{key === 'food_deep_fish' ? 'Boats' : 'Regular'}</span>}
+        <input
+          type="number"
+          min="0"
+          max="200"
+          aria-label={`${labels[key]} regular villagers`}
+          value={villagers[key]}
+          onChange={(e) => {
+            let val = parseInt(e.target.value, 10);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 200) val = 200;
+            setVillagers(key, val);
+          }}
+          className="w-full p-2 text-lg font-bold border rounded text-center font-mono focus:outline-none focus:border-[var(--civ-primary)] focus:ring-1 focus:ring-[var(--civ-primary)] bg-white shadow-sm"
+        />
+      </div>
+      {civ === 'jin' && key !== 'food_deep_fish' && (
+        <label className="flex items-center gap-1 text-xs text-slate-500">
           Mounted
           <input
             type="number"
@@ -57,32 +90,16 @@ export const VillagerAllocator = () => {
             value={mountedVillagers[key]}
             onChange={(e) => setMountedVillagers(key, Number(e.target.value))}
             aria-label={`${labels[key]} mounted villagers`}
-            className="w-full p-2 border rounded text-center font-mono bg-white"
+            className="w-full min-w-0 p-2 border rounded text-center font-mono bg-white"
           />
         </label>
       )}
-      
-      <div className="flex items-center">
-        {civ === 'jin' && <span className="text-xs text-slate-500 mr-2">Regular</span>}
-        <input 
-          type="number" 
-          min="0"
-          max="200"
-          aria-label={`${labels[key]} regular villagers`}
-          value={villagers[key]}
-          onChange={(e) => {
-            let val = parseInt(e.target.value, 10);
-            if (isNaN(val) || val < 0) val = 0;
-            setVillagers(key, val);
-          }}
-          className="w-full p-2 text-lg font-bold border rounded text-center font-mono focus:outline-none focus:border-[var(--civ-primary)] focus:ring-1 focus:ring-[var(--civ-primary)] bg-white shadow-sm"
-        />
-      </div>
     </div>
   );
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 w-full">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3 w-full">
       <div className="flex justify-between items-center mb-6 border-b pb-2 border-slate-100">
         <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
           <span className="bg-[var(--civ-primary)] text-white text-sm px-2 py-1 rounded-full">
@@ -91,7 +108,7 @@ export const VillagerAllocator = () => {
           Villager Allocation
         </h3>
       </div>
-      
+
       {civ === 'jin' && (
         <p className="text-xs text-slate-500 mb-4">
           Mounted Villagers: {mountedTotal}/{mountedLimit}. Estimated work rates: 2.2× outside farms,
@@ -99,64 +116,19 @@ export const VillagerAllocator = () => {
           community measurements, not verified for the current patch.
         </p>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {/* Food Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.food_sheep} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Food</span>
-          </div>
-          {renderAllocator('food_sheep')}
-          {renderAllocator('food_berries')}
-          {renderAllocator('food_deer')}
-          {renderAllocator('food_boar')}
-          {renderAllocator('food_farms')}
-        </div>
-
-        {/* Wood Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.wood} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Wood</span>
-          </div>
-          {renderAllocator('wood')}
-        </div>
-
-        {/* Gold Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.gold} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Gold</span>
-          </div>
-          {renderAllocator('gold')}
-        </div>
-
-        {/* Stone Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.stone} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Stone</span>
-          </div>
-          {renderAllocator('stone')}
-        </div>
-
-        {/* Olive Oil Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.oliveoil} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Olive Oil</span>
-          </div>
-          {renderAllocator('oliveoil')}
-        </div>
-
-        {/* Silver Column */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-slate-100 mb-1">
-            <img src={icons.silver} className="w-4 h-4" alt="" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Silver</span>
-          </div>
-          {renderAllocator('silver')}
-        </div>
+      <div className={`grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 ${civ === 'jin' ? 'lg:grid-cols-6' : 'lg:grid-cols-12'} gap-2`}>
+        {renderAllocator('food_sheep')}
+        {renderAllocator('food_berries')}
+        {renderAllocator('food_deer')}
+        {renderAllocator('food_boar')}
+        {renderAllocator('food_farms')}
+        {renderAllocator('food_fish')}
+        {renderAllocator('food_deep_fish')}
+        {renderAllocator('wood')}
+        {renderAllocator('gold')}
+        {renderAllocator('stone')}
+        {renderAllocator('oliveoil')}
+        {renderAllocator('silver')}
       </div>
     </div>
   );

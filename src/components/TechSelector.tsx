@@ -48,7 +48,7 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
                   tech.costs?.stone ? `${tech.costs.stone}S` : '',
                 ].filter(Boolean).join(' ')} | Time: ${tech.costs?.time || '?'}s\n${tech.description || ''}`}
               >
-              <img src={tech.icon} alt={tech.name} className="w-8 h-8 rounded-sm object-cover bg-slate-900" />
+               <img src={tech.icon} alt={tech.name} loading="lazy" className="w-8 h-8 rounded-sm object-cover bg-slate-900" />
               <div className="flex flex-col items-start">
                 <span className="text-sm font-medium">{tech.name}</span>
                 <CostDisplay costs={tech.costs} compact />

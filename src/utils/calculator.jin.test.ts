@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MOUNTED_VILLAGER_GATHER_MULT,
+  BASE_RATES,
   MOUNTED_VILLAGER_FARM_MULT,
   calculateProductionDrain,
   calculateMaxProduction,
@@ -21,6 +22,8 @@ const emptyVillagers: VillagerAllocation = {
   food_deer: 0,
   food_boar: 0,
   food_farms: 0,
+  food_fish: 0,
+  food_deep_fish: 0,
   wood: 0,
   gold: 0,
   stone: 0,
@@ -93,12 +96,12 @@ describe('Jin Dynasty calculator rules', () => {
 
   it('expresses required economy in regular villagers, without a blanket Jin bonus', () => {
     const rates = getEffectiveRates('jin', 1, []);
-    const baseFarm = 40; // BASE_RATES.food_farms on this branch
+    const baseFarm = BASE_RATES.food_farms;
 
     expect(rates.food).toBeCloseTo(baseFarm);
-    expect(rates.wood).toBeCloseTo(40);
-    expect(rates.gold).toBeCloseTo(40);
-    expect(rates.stone).toBeCloseTo(40);
+    expect(rates.wood).toBeCloseTo(BASE_RATES.wood);
+    expect(rates.gold).toBeCloseTo(BASE_RATES.gold);
+    expect(rates.stone).toBeCloseTo(BASE_RATES.stone);
   });
 
   it('applies the Mounted Villager gather multiplier in calculateRPM', () => {
@@ -115,7 +118,7 @@ describe('Jin Dynasty calculator rules', () => {
 
     expect(rpm).toEqual({
       ...expectedZeroResources,
-      food: Math.round(6 * 40 * MOUNTED_VILLAGER_GATHER_MULT), // 528
+      food: Math.round(6 * BASE_RATES.food_sheep * MOUNTED_VILLAGER_GATHER_MULT),
     });
   });
 
@@ -142,10 +145,10 @@ describe('Jin Dynasty calculator rules', () => {
       { villagerType: 'mounted' }
     );
 
-    // Required economy uses regular workers: ceil(111.4/40), ceil(85.7/40).
+    // Required economy uses regular workers: ceil(111.4/45), ceil(85.7/45).
     expect(required.food).toBe(3);
-    expect(required.gold).toBe(3);
-    expect(required.total).toBe(6);
+    expect(required.gold).toBe(2);
+    expect(required.total).toBe(5);
   });
 
   it('does not drain gold from villager production for other civs', () => {
@@ -160,7 +163,7 @@ describe('Jin Dynasty calculator rules', () => {
       1
     );
 
-    expect(required.food).toBe(4); // 60/20 * 50 = 150 food/min → ceil(150 / 46) = 4
+    expect(required.food).toBe(3); // ceil(150 / 51.75)
     expect(required.gold).toBe(0);
   });
 
@@ -219,7 +222,7 @@ describe('Jin Dynasty calculator rules', () => {
   it('does not apply Jin bonuses to other civilizations (regression)', () => {
     // No gather multiplier for English
     const enRates = getEffectiveRates('en', 1, []);
-    expect(enRates.wood).toBeCloseTo(40); // no 1.9x
+    expect(enRates.wood).toBeCloseTo(BASE_RATES.wood);
 
     // No Tributary food for English, even when tributaries are passed
     expect(calculateRPM(emptyVillagers, 'en', 3, [], 0, 0, 3, {
@@ -278,12 +281,12 @@ describe('Jin Dynasty calculator rules', () => {
     const rpm = calculateRPM({ ...emptyVillagers, wood: 10, food_farms: 2 }, 'jin', 3, [], 0, 0, 0, {
       mountedVillagers: { wood: 5, food_farms: 3, food_sheep: 4 },
     });
-    expect(rpm.wood).toBe(840);
-    expect(rpm.food).toBe(Math.round(80 + 3 * 40 * MOUNTED_VILLAGER_FARM_MULT + 4 * 40 * MOUNTED_VILLAGER_GATHER_MULT));
+    expect(rpm.wood).toBe(945);
+    expect(rpm.food).toBe(Math.round(2 * BASE_RATES.food_farms + 3 * BASE_RATES.food_farms * MOUNTED_VILLAGER_FARM_MULT + 4 * BASE_RATES.food_sheep * MOUNTED_VILLAGER_GATHER_MULT));
   });
 
   it('does not grant mounted bonuses to regular Jin workers', () => {
-    expect(calculateRPM({ ...emptyVillagers, wood: 40 }, 'jin', 1, []).wood).toBe(1600);
+    expect(calculateRPM({ ...emptyVillagers, wood: 40 }, 'jin', 1, []).wood).toBe(1800);
   });
 
   it('limits mounted allocation and unlocks additional workers only in Castle Age', () => {
@@ -299,7 +302,32 @@ describe('Jin Dynasty calculator rules', () => {
     const rpm = calculateRPM({ ...emptyVillagers, wood: 10 }, 'jin', 2, ['double-broadax'], 0, 0, 0, {
       mountedVillagers: { wood: 5 },
     });
-    expect(rpm.wood).toBe(Math.round((400 + 440) * 1.15));
+    expect(rpm.wood).toBe(Math.round(945 * 1.15));
+  });
+
+  it('preserves shore fishing and deep sea income without mounted boat bonuses', () => {
+    const rpm = calculateRPM({ ...emptyVillagers, food_fish: 2, food_deep_fish: 3 }, 'jin', 3, [], 0, 0, 0, {
+      mountedVillagers: { food_fish: 1, food_deep_fish: 10 },
+    });
+    expect(rpm.food).toBe(120 + 135 + 132);
+    expect(normalizeMountedVillagers({ food_deep_fish: 10 }, 3).food_deep_fish).toBe(0);
+  });
+
+  it('combines relic income with tributary food and mounted TC drain', () => {
+    const jin = { villagerType: 'mounted' as const, tributaryFoodRate: 80 };
+    const rpm = calculateRPM(emptyVillagers, 'jin', 3, [], 0, 0, 2, jin, 1);
+    expect(rpm.food).toBe(160);
+    expect(rpm.gold).toBe(100);
+    const required = calculateRequiredVillagers([], allUnits, 'jin', 3, [], 0, 0, 1, 2, jin, 1);
+    expect(required.food).toBe(0);
+    expect(required.gold).toBe(0);
+  });
+
+  it('preserves other civilizations fishing and relic generation', () => {
+    const rpm = calculateRPM({ ...emptyVillagers, food_fish: 2, food_deep_fish: 3 }, 'mo', 3, [], 1, 0, 0, {}, 2);
+    expect(rpm.food).toBe(255);
+    expect(rpm.gold).toBe(200);
+    expect(rpm.stone).toBe(130);
   });
 
   it.each([0, -1, Infinity, NaN])('reports invalid training time %s instead of inventing a rate', (time) => {

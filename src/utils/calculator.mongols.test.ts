@@ -15,6 +15,8 @@ const emptyVillagers: VillagerAllocation = {
   food_deer: 0,
   food_boar: 0,
   food_farms: 0,
+  food_fish: 0,
+  food_deep_fish: 0,
   wood: 0,
   gold: 0,
   stone: 0,
@@ -70,7 +72,7 @@ describe('Mongols calculator rules', () => {
 
     expect(rpm).toEqual({
       ...expectedZeroResources,
-      food: 240,
+      food: 270,
     });
   });
 

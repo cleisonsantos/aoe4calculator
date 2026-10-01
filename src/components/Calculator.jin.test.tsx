@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCalculatorStore } from '../store/useCalculatorStore';
-import { OutputDashboard } from './OutputDashboard';
+import { OutputDashboard, RequiredVillagersBar, ProductionSummary, RpmBar, MaxProductionGrid } from './OutputDashboard';
 import { PassiveGenerationSelector } from './PassiveGenerationSelector';
 import { TownCenterSelector } from './TownCenterSelector';
 import { VillagerAllocator } from './VillagerAllocator';
@@ -41,26 +41,41 @@ describe('Jin UI integration', () => {
   it('renders an explicit unavailable warning instead of partial economy totals', () => {
     useCalculatorStore.getState().setUnitProduction('horseman-2', 1);
     useCalculatorStore.getState().setUnitProduction('spearman-2', 1);
-    const html = renderToStaticMarkup(<OutputDashboard />);
+    const html = renderToStaticMarkup(<><RequiredVillagersBar /><ProductionSummary /><OutputDashboard /></>);
     expect(html).toContain('Production calculation unavailable');
     expect(html).toContain('Horseman');
     expect(html).not.toContain('Total Villagers Needed');
+    expect(html).not.toContain('Required Villagers:');
     expect(html).not.toContain('Can Produce Both Simultaneously');
   });
 
   it('renders valid required economy with its regular-worker assumption', () => {
     useCalculatorStore.getState().setUnitProduction('spearman-2', 1);
-    const html = renderToStaticMarkup(<OutputDashboard />);
-    expect(html).toContain('Total Villagers Needed');
+    const html = renderToStaticMarkup(<RequiredVillagersBar />);
+    expect(html).toContain('Required Villagers:');
     expect(html).toContain('Economy expressed in regular villagers');
   });
 
   it('renders Resource Mode without depending on training time', () => {
     useCalculatorStore.getState().loadFromUrl('?civ=jin&age=2&mode=resource&food_sheep=0&wood=10&mv_food_sheep=6');
-    const html = renderToStaticMarkup(<OutputDashboard />);
-    expect(html).toContain('528');
+    const html = renderToStaticMarkup(<><RpmBar /><MaxProductionGrid /></>);
+    expect(html).toContain('594');
     expect(html).toContain('Horseman');
     expect(html).not.toContain('Production calculation unavailable');
+  });
+
+  it('checks gold as well as food for mounted TCs in Resource Mode', () => {
+    useCalculatorStore.getState().loadFromUrl('?civ=jin&age=3&mode=resource&mv_food_sheep=6&vt=mounted');
+    const html = renderToStaticMarkup(<TownCenterSelector />);
+    expect(html).toContain('Not enough resources for TCs');
+    expect(html).toContain('gold surplus:');
+    expect(html).not.toContain('Can sustain TC production');
+  });
+
+  it('includes relics and tributaries in Resource Mode TC sustainability', () => {
+    useCalculatorStore.getState().loadFromUrl('?civ=jin&age=3&mode=resource&food_sheep=0&vt=mounted&tb=2&tfr=80&rl=1');
+    const html = renderToStaticMarkup(<TownCenterSelector />);
+    expect(html).toContain('Can sustain TC production');
   });
 
   it('renders the chosen TC costs from live data', () => {

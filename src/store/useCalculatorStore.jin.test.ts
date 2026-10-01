@@ -73,6 +73,15 @@ describe('Jin state and URL', () => {
     expect(store().villagerType).toBe('regular');
   });
 
+  it('preserves fishing and relic URL parameters with Jin settings', () => {
+    store().loadFromUrl('?civ=jin&age=3&food_fish=2&food_deep_fish=3&rl=2&mv_food_fish=4&mv_food_deep_fish=10');
+    expect(store().villagers.food_fish).toBe(2);
+    expect(store().villagers.food_deep_fish).toBe(3);
+    expect(store().relics).toBe(2);
+    expect(store().mountedVillagers.food_fish).toBe(4);
+    expect(store().mountedVillagers.food_deep_fish).toBe(0);
+  });
+
   it('sanitizes malformed mounted inputs', () => {
     store().loadFromUrl('?civ=jin&age=3&tb=NaN&tfr=Infinity&mv_wood=Infinity&mv_gold=-5&mv_food_farms=nope');
     expect(mountedTotal()).toBe(0);
