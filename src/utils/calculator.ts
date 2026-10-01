@@ -47,7 +47,7 @@ const getTributaryFood = (civ: string, age: number, tributaries = 0, rate = 0) =
 /**
  * Retrieves villager stats (cost and training time) for a specific civilization.
  * Falls back to defaults if villager unit is not found in the data.
- * 
+ *
  * The villager unit is identified by having "villager" in its classes array.
  * Different civilizations may have different villager units (e.g., "gilded-villager" for Order of the Dragon).
  * Jin has both regular and mounted villagers; mounted production must be explicitly selected.
@@ -183,7 +183,7 @@ export const getEffectiveRates = (
 
   // Use farms as default food source for reverse calculations
   let foodRate = BASE_RATES.food_farms * m.food_mult;
-  
+
   // Apply civ-specific bonuses to the default food source (farms)
   if (civ === 'en') {
     const eng_farm_mult = age >= 4 ? 1.30 : age >= 3 ? 1.20 : 1.15;
@@ -524,41 +524,41 @@ export const calculateVillagerProduction = (
   villagerType: 'regular' | 'mounted' = 'regular'
 ): VillagerProductionAnalysis => {
   // Get villager stats dynamically from API data
-  const villagerStats = (allUnits && civ) 
+  const villagerStats = (allUnits && civ)
     ? getVillagerStats(allUnits, civ, villagerType)
     : { cost: 50, goldCost: 0, time: 20 };
-  
+
   const VILLAGER_FOOD_COST = villagerStats.cost;
   const VILLAGER_GOLD_COST = villagerStats.goldCost;
   const VILLAGER_TIME = villagerStats.time;
-  
+
   // Calculate villager production rate per TC (villagers per minute)
   const villagersPerMinutePerTc = 60 / VILLAGER_TIME;
-  
+
   // Total villager production rate
   const totalVillagerRate = tcProducingVillagers * villagersPerMinutePerTc;
-  
+
   // Food drain from villager production
   const foodDrainFromVillagers = totalVillagerRate * VILLAGER_FOOD_COST;
-  
+
   // Gold drain from villager production (Jin Mounted Villagers cost gold)
   const goldDrainFromVillagers = totalVillagerRate * VILLAGER_GOLD_COST;
-  
+
   // Calculate food/gold surplus after unit production and villager production
   const foodAvailable = rpm.food;
   const foodUsedByUnits = unitDrain.food;
   const foodSurplus = foodAvailable - foodUsedByUnits - foodDrainFromVillagers;
-  
+
   const goldAvailable = rpm.gold;
   const goldUsedByUnits = unitDrain.gold;
   const goldSurplus = goldAvailable - goldUsedByUnits - goldDrainFromVillagers;
-  
+
   // Can produce simultaneously if we have enough food AND gold for both
   const canProduceSimultaneously = foodSurplus >= 0 && goldSurplus >= 0;
-  
+
   // Calculate max TCs that can produce villagers with current food surplus
   const foodAfterUnits = foodAvailable - foodUsedByUnits;
-  const maxTcByFood = foodAfterUnits > 0 
+  const maxTcByFood = foodAfterUnits > 0
     ? Math.floor(foodAfterUnits / (villagersPerMinutePerTc * VILLAGER_FOOD_COST))
     : 0;
 
@@ -570,7 +570,7 @@ export const calculateVillagerProduction = (
         : 0)
     : Infinity;
   const maxTcForCurrentFood = Math.min(maxTcByFood, maxTcByGold);
-  
+
   return {
     tcProducingVillagers,
     villagerProductionRate: Math.round(totalVillagerRate * 10) / 10,
