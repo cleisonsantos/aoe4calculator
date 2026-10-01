@@ -3,6 +3,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { type UnitData } from '../data/api';
 import { Plus, Minus, X, Swords, Pickaxe, CopyPlus } from 'lucide-react';
 import { CostDisplay } from './ResourceIcon';
+import { isTrainableUnit, getDoubleProductionStoneCost } from '../utils/calculator';
 
 const STONE_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/stone.png';
 
@@ -30,22 +31,25 @@ const unitTooltip = (u: UnitData) => {
 };
 
 export const UnitSelector = ({ units }: { units: UnitData[] }) => {
-  const { civ, age, mode, units: activeUnits, setUnitProduction, toggleDoubleProduction } = useCalculatorStore();
+  const { civ, age, mode, units: activeUnits, setUnitProduction, toggleDoubleProduction, mongolEconomy } = useCalculatorStore();
   const isMongolVariant = civ === 'mo' || civ === 'gol';
 
-  // Filter available units for current civ and age, dedup by baseId (keep highest age)
+  // Mongol veterancy variants stay explicit: reaching an age does not research upgrades.
   const availableUnits = Object.values(
     units
-      .filter(u => u.civs.includes(civ) && u.classes?.includes('military') && !u.classes?.includes('ship') && u.age <= age)
+      .filter(u => !u.classes?.includes('ship') && isTrainableUnit(u, civ, age, mongolEconomy))
       .reduce((acc, u) => {
-        const existing = acc[u.baseId];
-        if (!existing || u.age > existing.age) acc[u.baseId] = u;
+        const key = civ === 'mo' ? u.id : u.baseId;
+        const existing = acc[key];
+        if (!existing || u.age > existing.age) acc[key] = u;
         return acc;
       }, {} as Record<string, UnitData>)
   );
 
   // Group by production building loosely
-  const getProdBuilding = (u: UnitData) => u.producedBy?.[0] || 'other';
+  const getProdBuilding = (u: UnitData) => (civ === 'mo'
+    ? u.producedBy?.find(building => ['barracks', 'archery-range', 'stable', 'siege-workshop'].includes(building))
+    : u.producedBy?.[0]) || 'other';
 
   const isUnitMode = mode === 'unit';
 
@@ -63,6 +67,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
             ? 'Select the units you want to produce continuously. The panel will show how many villagers you need.'
             : 'Select units to check if your economy can sustain their production.'}
         </p>
+        {civ === 'mo' && <p className="text-xs text-slate-500 mt-1">Choose the actually researched unit variant. Reaching an age does not automatically research veterancy.</p>}
       </div>
 
       <div className="mb-8">
@@ -84,6 +89,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
                 <img src={u.icon} alt={u.name} className="w-8 h-8 rounded-sm object-cover bg-slate-900 shrink-0" />
                 <div className="flex flex-col items-start overflow-hidden text-left">
                   <span className="text-xs font-bold text-slate-700 truncate w-full">{u.name}</span>
+                  {civ === 'mo' && <span className="text-[10px] text-slate-500">Age {u.age}</span>}
                   <CostDisplay costs={u.costs} compact />
                 </div>
               </button>
@@ -99,7 +105,8 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
             const unitDef = units.find(u => u.id === au.id && u.civs.includes(civ));
             if (!unitDef) return null;
 
-            const doubleStoneCost = (unitDef.costs.food || 0) + (unitDef.costs.wood || 0) + (unitDef.costs.gold || 0) + (unitDef.costs.stone || 0);
+            const doubleStoneCost = civ === 'mo' ? getDoubleProductionStoneCost(unitDef, mongolEconomy)
+              : (unitDef.costs.food || 0) + (unitDef.costs.wood || 0) + (unitDef.costs.gold || 0) + (unitDef.costs.stone || 0);
 
             return (
               <div key={au.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
@@ -118,7 +125,7 @@ export const UnitSelector = ({ units }: { units: UnitData[] }) => {
                       <button
                         onClick={() => toggleDoubleProduction(au.id)}
                         className={`p-1.5 rounded-md transition-all border ${au.doubleProduced ? 'bg-amber-100 border-amber-400 text-amber-700' : 'bg-slate-100 border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-300'}`}
-                        title={au.doubleProduced ? `Double production active: consumes ${doubleStoneCost} stone per unit` : 'Enable double production'}
+                        title={`Double production: ${doubleStoneCost} stone per pair. ${au.doubleProduced ? 'Active' : 'Enable'}`}
                       >
                         <img src={STONE_ICON} alt="Ovoo" loading="lazy" className="w-4 h-4 object-contain" />
                       </button>

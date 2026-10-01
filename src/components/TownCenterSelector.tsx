@@ -1,12 +1,16 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
-import { calculateRPM, calculateVillagerProduction, getVillagerStats, getEffectiveRates } from '../utils/calculator';
+import { calculateRPM, calculateVillagerProduction, calculateProductionDrain, calculateRequiredVillagers, getVillagerStats, getEffectiveRates, calculateBuildingTradeoff } from '../utils/calculator';
+import { CostDisplay } from './ResourceIcon';
 import { Home, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 export const TownCenterSelector = () => {
-  const { tcProducingVillagers, setTcProducingVillagers, age, mode, civ, villagers, activeTechs, mountedVillagers, villagerType, setVillagerType, tributaries, tributaryFoodRate, ovooCount, sacredSites, relics } = useCalculatorStore();
-  const { units: allUnits } = useAoE4Data();
+  const { tcProducingVillagers, setTcProducingVillagers, age, mode, civ, villagers, activeTechs, mountedVillagers, villagerType, setVillagerType, tributaries, tributaryFoodRate, ovooCount, sacredSites, relics, mongolEconomy, units: activeUnits } = useCalculatorStore();
+  const { units: allUnits, buildings = [] } = useAoE4Data();
+  const townCenter = buildings.find(b => b.baseId === 'town-center' && b.civs.includes('mo'));
+  const pasture = buildings.find(b => b.baseId === 'pasture' && b.civs.includes('mo'));
+  const tradeoff = townCenter && pasture ? calculateBuildingTradeoff(townCenter, pasture) : null;
 
   // Max TCs: only the starting TC in Dark Age; no hard cap from Feudal+
   const maxTcs = age === 1 ? 1 : 10;
@@ -21,18 +25,20 @@ export const TownCenterSelector = () => {
   const totalFoodDrain = tcProducingVillagers * foodDrainPerTc;
 
   const rpm = (allUnits?.length && civ)
-    ? calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics)
+    ? calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics, mongolEconomy)
     : { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 };
 
   const currentFoodRpm = rpm.food;
   const foodSurplus = currentFoodRpm - totalFoodDrain;
 
   const effRates = (allUnits?.length && civ)
-    ? getEffectiveRates(civ, age, activeTechs)
+    ? getEffectiveRates(civ, age, activeTechs, mongolEconomy)
     : { food: 40, wood: 40, gold: 40, stone: 40, oliveoil: 40, silver: 40 };
   const suggestedFoodVills = totalFoodDrain > 0 ? Math.ceil(totalFoodDrain / effRates.food) : 0;
-  const analysis = calculateVillagerProduction(rpm, tcProducingVillagers,
-    { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 }, allUnits, civ, villagerType);
+  const production = calculateProductionDrain(activeUnits, allUnits, civ, mongolEconomy, activeTechs);
+  const required = calculateRequiredVillagers(activeUnits, allUnits, civ, age, activeTechs, ovooCount, sacredSites, tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate }, relics, mongolEconomy);
+  const analysis = calculateVillagerProduction(rpm, tcProducingVillagers, production.total, allUnits, civ, villagerType);
+  const sustainable = analysis.canProduceSimultaneously && required.stoneDeficit <= 0 && production.missingTimeUnits.length === 0 && (civ !== 'mo' || rpm.wood >= production.total.wood);
   const maxTcSupported = analysis.maxTcForCurrentFood;
 
   const currentFoodVills = villagers.food_sheep + villagers.food_berries + villagers.food_deer + villagers.food_boar + villagers.food_farms + villagers.food_fish + villagers.food_deep_fish
@@ -40,6 +46,18 @@ export const TownCenterSelector = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+      {civ === 'mo' && (
+        <div className="mb-4 p-3 bg-slate-50 rounded border border-slate-200">
+          <h3 className="font-bold mb-2">Town Center vs Pastures</h3>
+          {townCenter && pasture && tradeoff ? <>
+            <div className="text-sm">{townCenter.name}: <CostDisplay costs={townCenter.costs} compact /></div>
+            <div className="text-sm">{pasture.name}: <CostDisplay costs={pasture.costs} compact /></div>
+            <p className="text-sm mt-2">One Town Center's wood budget buys {tradeoff.pastures} pastures, with {tradeoff.remainingWood} wood remaining.</p>
+          </> : <p className="text-sm">Live building costs unavailable.</p>}
+          <p className="text-xs text-slate-500 mt-2">Pastures provide sheep, not direct food income. Sheep intervals and villager capacity are not modeled; allocate sheep gatherers separately.</p>
+          <p className="text-xs text-slate-500 mt-2">Trade routes, raid income and pasture replenishment are not included. Khaganate Palace random batches are not normal production queues.</p>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
           <Home className="w-5 h-5 text-[var(--civ-primary)]" />
@@ -101,31 +119,34 @@ export const TownCenterSelector = () => {
         </div>
       )}
 
+      {required.stoneDeficit > 0 && <p role='alert' className='text-red-700 text-sm mt-3'>Stone deficit: {required.stoneDeficit}/min; selected double production is not sustainable.</p>}
+      {civ === 'mo' && mode === 'resource' && rpm.wood < production.total.wood && <p role="alert" className="text-red-700 text-sm mt-3">Wood income is below selected army production demand ({production.total.wood}/min).</p>}
       {/* ── Food Sustainability Analysis in Resource Mode ── */}
       {mode === 'resource' && tcProducingVillagers > 0 && (
         <div className="mt-4 space-y-3">
           <div className={`p-3 rounded-lg border-2 ${
-            analysis.canProduceSimultaneously
+            sustainable
               ? 'bg-green-50 border-green-200'
               : 'bg-amber-50 border-amber-200'
           }`}>
             <div className="flex items-center gap-2 mb-2">
-              {analysis.canProduceSimultaneously ? (
+              {sustainable ? (
                 <CheckCircle className="w-5 h-5 text-green-600" />
               ) : (
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               )}
               <span className={`font-bold text-sm ${
-                analysis.canProduceSimultaneously ? 'text-green-800' : 'text-amber-800'
+                sustainable ? 'text-green-800' : 'text-amber-800'
               }`}>
-                {analysis.canProduceSimultaneously
+                {sustainable
                   ? 'Can sustain TC production'
                   : 'Not enough resources for TCs'}
               </span>
             </div>
             <p className={`text-xs ${
-              analysis.canProduceSimultaneously ? 'text-green-700' : 'text-amber-700'
+              sustainable ? 'text-green-700' : 'text-amber-700'
             }`}>
+              {civ === 'mo' && activeUnits.length > 0 && <span>Selected army also consumes {Math.round(production.total.food)} food/min; food surplus after army and TCs: {Math.round(analysis.foodSurplus)}/min. </span>}
               {analysis.goldDrainFromVillagers > 0 && (
                 <span>TCs consume {analysis.goldDrainFromVillagers} gold/min; gold surplus: {analysis.goldSurplus}/min. </span>
               )}
@@ -145,7 +166,7 @@ export const TownCenterSelector = () => {
               <div className={`text-lg font-bold ${currentFoodVills >= suggestedFoodVills ? 'text-green-600' : 'text-amber-600'}`}>
                 {suggestedFoodVills}
               </div>
-              <div className="text-[10px] text-slate-400">{Math.round(effRates.food)} food/min per regular farm worker</div>
+              <div className="text-[10px] text-slate-400">{Math.round(effRates.food)} food/min per regular food worker</div>
             </div>
             <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
               <div className="text-[10px] text-slate-500 font-medium uppercase mb-1">Food drain from TCs</div>
