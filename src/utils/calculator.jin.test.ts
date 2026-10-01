@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   MOUNTED_VILLAGER_GATHER_MULT,
-  TRIBUTARY_FOOD_RATE,
+  MOUNTED_VILLAGER_FARM_MULT,
+  calculateProductionDrain,
+  calculateMaxProduction,
+  normalizeMountedVillagers,
   calculateRequiredVillagers,
   calculateRPM,
   calculateVillagerProduction,
@@ -34,9 +37,7 @@ const expectedZeroResources: ResourceSet = {
   silver: 0,
 };
 
-// Regular villager listed FIRST on purpose: the API returns villager-1 (index 589)
-// after mounted-villager-1 (index 576), but the helper must prioritize the
-// mounted_villager class regardless of array order.
+// Both types exist in the live API; selection must not depend on array order.
 const regularVillager: UnitData = {
   id: 'villager-1',
   baseId: 'villager',
@@ -76,8 +77,8 @@ const horseman: UnitData = {
 const allUnits = [regularVillager, mountedVillager, horseman];
 
 describe('Jin Dynasty calculator rules', () => {
-  it('uses the Mounted Villager as the Jin economic villager (65F + 50G, 35s)', () => {
-    const stats = getVillagerStats(allUnits, 'jin');
+  it('uses the Mounted Villager when explicitly selected (65F + 50G, 35s)', () => {
+    const stats = getVillagerStats(allUnits, 'jin', 'mounted');
     expect(stats.cost).toBe(65);
     expect(stats.goldCost).toBe(50);
     expect(stats.time).toBe(35);
@@ -90,35 +91,41 @@ describe('Jin Dynasty calculator rules', () => {
     expect(stats.time).toBe(20);
   });
 
-  it('applies the Mounted Villager gather multiplier in getEffectiveRates', () => {
+  it('expresses required economy in regular villagers, without a blanket Jin bonus', () => {
     const rates = getEffectiveRates('jin', 1, []);
     const baseFarm = 40; // BASE_RATES.food_farms on this branch
 
-    expect(rates.food).toBeCloseTo(baseFarm * MOUNTED_VILLAGER_GATHER_MULT);
-    expect(rates.wood).toBeCloseTo(40 * MOUNTED_VILLAGER_GATHER_MULT);
-    expect(rates.gold).toBeCloseTo(40 * MOUNTED_VILLAGER_GATHER_MULT);
-    expect(rates.stone).toBeCloseTo(40 * MOUNTED_VILLAGER_GATHER_MULT);
+    expect(rates.food).toBeCloseTo(baseFarm);
+    expect(rates.wood).toBeCloseTo(40);
+    expect(rates.gold).toBeCloseTo(40);
+    expect(rates.stone).toBeCloseTo(40);
   });
 
   it('applies the Mounted Villager gather multiplier in calculateRPM', () => {
     const rpm = calculateRPM(
-      { ...emptyVillagers, food_sheep: 6 },
+      emptyVillagers,
       'jin',
       1,
       [],
       0,
-      0
+      0,
+      0,
+      { mountedVillagers: { food_sheep: 6 } }
     );
 
     expect(rpm).toEqual({
       ...expectedZeroResources,
-      food: Math.round(6 * 40 * MOUNTED_VILLAGER_GATHER_MULT), // 456
+      food: Math.round(6 * 40 * MOUNTED_VILLAGER_GATHER_MULT), // 528
     });
   });
 
   it('adds passive food from Tributary States in calculateRPM', () => {
-    expect(calculateRPM(emptyVillagers, 'jin', 1, [], 0, 0, 1).food).toBe(TRIBUTARY_FOOD_RATE);
-    expect(calculateRPM(emptyVillagers, 'jin', 2, [], 0, 0, 3).food).toBe(TRIBUTARY_FOOD_RATE * 3);
+    const settings = { tributaryFoodRate: 80 }; // User input, not a game balance value.
+    expect(calculateRPM(emptyVillagers, 'jin', 3, [], 0, 0, 1, settings).food).toBe(80);
+    expect(calculateRPM(emptyVillagers, 'jin', 4, [], 0, 0, 3, settings).food).toBe(240);
+    expect(calculateRPM(emptyVillagers, 'jin', 3, [], 0, 0, 3).food).toBe(0);
+    expect(calculateRPM(emptyVillagers, 'jin', 1, [], 0, 0, 3, settings).food).toBe(0);
+    expect(calculateRPM(emptyVillagers, 'jin', 2, [], 0, 0, 3, settings).food).toBe(0);
   });
 
   it('includes the gold cost of Mounted Villagers in the required-villager drain', () => {
@@ -130,14 +137,15 @@ describe('Jin Dynasty calculator rules', () => {
       [],
       0,
       0,
-      1 // 1 TC producing Mounted Villagers (65F + 50G, 35s)
+      1,
+      0,
+      { villagerType: 'mounted' }
     );
 
-    // Villager drain: 60/35 * 65 ≈ 111.4 food/min → ceil(111.4 / 76) = 2
-    //                60/35 * 50 ≈ 85.7 gold/min → ceil(85.7 / 76) = 2
-    expect(required.food).toBe(2);
-    expect(required.gold).toBe(2);
-    expect(required.total).toBe(4);
+    // Required economy uses regular workers: ceil(111.4/40), ceil(85.7/40).
+    expect(required.food).toBe(3);
+    expect(required.gold).toBe(3);
+    expect(required.total).toBe(6);
   });
 
   it('does not drain gold from villager production for other civs', () => {
@@ -157,23 +165,23 @@ describe('Jin Dynasty calculator rules', () => {
   });
 
   it('subtracts Tributary State passive food from the food drain', () => {
-    // 1 TC producing Mounted Villagers: 111.4 food/min drain
-    const base = calculateRequiredVillagers([], allUnits, 'jin', 1, [], 0, 0, 1);
-    const withOne = calculateRequiredVillagers([], allUnits, 'jin', 1, [], 0, 0, 1, 1);
-    const withTwo = calculateRequiredVillagers([], allUnits, 'jin', 1, [], 0, 0, 1, 2);
+    const settings = { villagerType: 'mounted' as const, tributaryFoodRate: 80 };
+    const base = calculateRequiredVillagers([], allUnits, 'jin', 3, [], 0, 0, 1, 0, settings);
+    const withOne = calculateRequiredVillagers([], allUnits, 'jin', 3, [], 0, 0, 1, 1, settings);
+    const withTwo = calculateRequiredVillagers([], allUnits, 'jin', 3, [], 0, 0, 1, 2, settings);
 
-    expect(withOne.food).toBeLessThan(base.food); // 51.4 food/min left → 1 villager
+    expect(withOne.food).toBeLessThan(base.food);
     expect(withTwo.food).toBe(0); // drain fully covered → no food villagers
   });
 
   it('reduces food villagers for unit production when Tributary States exist', () => {
     const horsemanDrain = [{ id: 'horseman', buildings: 1 }]; // 200 food/min
 
-    const base = calculateRequiredVillagers(horsemanDrain, allUnits, 'jin', 2, [], 0, 0);
-    const withTribute = calculateRequiredVillagers(horsemanDrain, allUnits, 'jin', 2, [], 0, 0, 0, 1);
+    const base = calculateRequiredVillagers(horsemanDrain, allUnits, 'jin', 3, [], 0, 0);
+    const withTribute = calculateRequiredVillagers(horsemanDrain, allUnits, 'jin', 3, [], 0, 0, 0, 1, { tributaryFoodRate: 80 });
 
-    expect(base.food).toBe(3); // ceil(200 / 76)
-    expect(withTribute.food).toBe(2); // ceil((200 - 60) / 76)
+    expect(base.food).toBe(5);
+    expect(withTribute.food).toBe(3);
   });
 
   it('reports gold drain from Mounted Villager production in the analysis', () => {
@@ -182,7 +190,8 @@ describe('Jin Dynasty calculator rules', () => {
       1,
       { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 },
       allUnits,
-      'jin'
+      'jin',
+      'mounted'
     );
 
     expect(analysis.foodDrainFromVillagers).toBe(111); // 60/35 * 65 ≈ 111.4
@@ -213,7 +222,10 @@ describe('Jin Dynasty calculator rules', () => {
     expect(enRates.wood).toBeCloseTo(40); // no 1.9x
 
     // No Tributary food for English, even when tributaries are passed
-    expect(calculateRPM(emptyVillagers, 'en', 1, [], 0, 0, 3).food).toBe(0);
+    expect(calculateRPM(emptyVillagers, 'en', 3, [], 0, 0, 3, {
+      tributaryFoodRate: 80,
+      mountedVillagers: { food_sheep: 20 },
+    }).food).toBe(0);
 
     // Regular English villager cost/time
     expect(getVillagerStats(allUnits, 'en').time).toBe(20);
@@ -226,7 +238,7 @@ describe('Jin Dynasty calculator rules', () => {
       baseId: 'horseman',
       name: 'Horseman',
       civs: ['jin', 'en'],
-      costs: { food: 75, wood: 20, gold: 0, stone: 0 } as any, // no time field
+      costs: { food: 75, wood: 20, gold: 0, stone: 0 }, // no time field
       producedBy: ['stable'],
       icon: '',
       classes: ['military'],
@@ -244,6 +256,54 @@ describe('Jin Dynasty calculator rules', () => {
     expect(Number.isNaN(required.food)).toBe(false);
     expect(Number.isNaN(required.gold)).toBe(false);
     expect(Number.isNaN(required.total)).toBe(false);
-    expect(required.total).toBeGreaterThan(0);
+    expect(required.missingTimeUnits).toEqual(['horseman-2']);
+    expect(required.total).toBe(0);
+    const drain = calculateProductionDrain([{ id: 'horseman-2', buildings: 1 }], [noTimeHorseman], 'jin');
+    expect(drain.perUnit).toEqual([]);
+    expect(drain.missingTimeUnits).toEqual(['horseman-2']);
+    const max = calculateMaxProduction({ ...expectedZeroResources, food: 150, wood: 40 }, [noTimeHorseman], 'jin', false);
+    expect(max[0].maxSustainable).toBe(2);
+  });
+
+  it('defaults Jin TC production to regular villagers regardless of API order', () => {
+    expect(getVillagerStats([mountedVillager, regularVillager], 'jin')).toEqual({
+      cost: 50, goldCost: 0, time: 20,
+    });
+    const required = calculateRequiredVillagers([], allUnits, 'jin', 1, [], 0, 0, 1);
+    expect(required.food).toBe(4);
+    expect(required.gold).toBe(0);
+  });
+
+  it('combines regular and mounted workers and applies the separate farm estimate', () => {
+    const rpm = calculateRPM({ ...emptyVillagers, wood: 10, food_farms: 2 }, 'jin', 3, [], 0, 0, 0, {
+      mountedVillagers: { wood: 5, food_farms: 3, food_sheep: 4 },
+    });
+    expect(rpm.wood).toBe(840);
+    expect(rpm.food).toBe(Math.round(80 + 3 * 40 * MOUNTED_VILLAGER_FARM_MULT + 4 * 40 * MOUNTED_VILLAGER_GATHER_MULT));
+  });
+
+  it('does not grant mounted bonuses to regular Jin workers', () => {
+    expect(calculateRPM({ ...emptyVillagers, wood: 40 }, 'jin', 1, []).wood).toBe(1600);
+  });
+
+  it('limits mounted allocation and unlocks additional workers only in Castle Age', () => {
+    expect(normalizeMountedVillagers({ wood: 40 }, 1, 3).wood).toBe(20);
+    expect(normalizeMountedVillagers({ wood: 40 }, 3, 3).wood).toBe(29);
+    const allocation = normalizeMountedVillagers({ food_sheep: 15, wood: 15, gold: -2 }, 1);
+    expect(allocation.food_sheep).toBe(15);
+    expect(allocation.wood).toBe(5);
+    expect(allocation.gold).toBe(0);
+  });
+
+  it('applies technologies to the mixed economy', () => {
+    const rpm = calculateRPM({ ...emptyVillagers, wood: 10 }, 'jin', 2, ['double-broadax'], 0, 0, 0, {
+      mountedVillagers: { wood: 5 },
+    });
+    expect(rpm.wood).toBe(Math.round((400 + 440) * 1.15));
+  });
+
+  it.each([0, -1, Infinity, NaN])('reports invalid training time %s instead of inventing a rate', (time) => {
+    const unit = { ...horseman, costs: { ...horseman.costs, time } };
+    expect(calculateProductionDrain([{ id: unit.id, buildings: 1 }], [unit], 'jin').missingTimeUnits).toEqual([unit.id]);
   });
 });

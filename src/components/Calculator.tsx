@@ -30,15 +30,22 @@ export const Calculator = () => {
       params.set('age', state.age.toString());
       
       Object.entries(state.villagers).forEach(([k, v]) => {
-        if (v > 0) params.set(k, v.toString());
+        if (v > 0 || k === 'food_sheep') params.set(k, v.toString());
       });
+      if (state.civ === 'jin') {
+        Object.entries(state.mountedVillagers).forEach(([k, v]) => {
+          if (v > 0) params.set(`mv_${k}`, v.toString());
+        });
+        if (state.villagerType === 'mounted') params.set('vt', 'mounted');
+        if (state.tributaryFoodRate > 0) params.set('tfr', state.tributaryFoodRate.toString());
+      }
 
       if (state.activeTechs.length > 0) params.set('techs', state.activeTechs.join(','));
       if (state.ovooCount > 0) params.set('oc', state.ovooCount.toString());
       if (state.ovooDoubleProduction) params.set('od', 'true');
       if (state.sacredSites > 0) params.set('ss', state.sacredSites.toString());
       if (state.tributaries > 0) params.set('tb', state.tributaries.toString());
-      if (state.tcProducingVillagers > 0) params.set('tc', state.tcProducingVillagers.toString());
+      params.set('tc', state.tcProducingVillagers.toString());
 
       if (state.units.length > 0) {
         const uParam = state.units.map(u => `${u.id}:${u.buildings}${u.doubleProduced ? ':d' : ''}`).join(',');

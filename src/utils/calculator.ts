@@ -1,6 +1,5 @@
-import { type VillagerAllocation } from '../store/useCalculatorStore';
-import { type UnitData } from '../data/api';
-import { type ProductionUnit } from '../store/useCalculatorStore';
+import type { VillagerAllocation, ProductionUnit } from '../store/useCalculatorStore';
+import type { UnitData } from '../data/api';
 
 // ── Villager Unit Helper ──
 
@@ -10,28 +9,61 @@ export interface VillagerStats {
   time: number; // training time in seconds
 }
 
+export interface JinEconomy {
+  mountedVillagers?: Partial<VillagerAllocation>;
+  villagerType?: 'regular' | 'mounted';
+  tributaryFoodRate?: number;
+}
+// Live API mounted-villager-1 description; Emissaries unlock in Age III.
+export const MOUNTED_VILLAGER_BASE_LIMIT = 20;
+export const MOUNTED_VILLAGERS_PER_TRIBUTARY = 3;
+export const TRIBUTARY_MIN_AGE = 3;
+
+export const getTributaryCount = (civ: string, age: number, count = 0) =>
+  civ === 'jin' && age >= TRIBUTARY_MIN_AGE && age <= 4 && Number.isFinite(count)
+    ? Math.max(0, Math.min(3, Math.floor(count)))
+    : 0;
+
+export const getMountedVillagerLimit = (age: number, tributaries = 0) =>
+  MOUNTED_VILLAGER_BASE_LIMIT + MOUNTED_VILLAGERS_PER_TRIBUTARY * getTributaryCount('jin', age, tributaries);
+
+export const normalizeMountedVillagers = (
+  allocation: Partial<VillagerAllocation> = {},
+  age: number,
+  tributaries = 0
+): VillagerAllocation => {
+  let remaining = getMountedVillagerLimit(age, tributaries);
+  return Object.fromEntries(Object.keys(BASE_RATES).map(key => {
+    const value = allocation[key as keyof VillagerAllocation] ?? 0;
+    const count = Number.isFinite(value) ? Math.min(remaining, Math.max(0, Math.floor(value))) : 0;
+    remaining -= count;
+    return [key, count];
+  })) as VillagerAllocation;
+};
+
+const getTributaryFood = (civ: string, age: number, tributaries = 0, rate = 0) =>
+  getTributaryCount(civ, age, tributaries) * (Number.isFinite(rate) ? Math.max(0, rate) : 0);
+
 /**
  * Retrieves villager stats (cost and training time) for a specific civilization.
  * Falls back to defaults if villager unit is not found in the data.
  * 
  * The villager unit is identified by having "villager" in its classes array.
  * Different civilizations may have different villager units (e.g., "gilded-villager" for Order of the Dragon).
- * Some civs expose MULTIPLE units with the "villager" class (Jin: mounted-villager-1 AND villager-1) —
- * in that case prioritize the "mounted_villager" class so the Mounted Villager is used as the
- * civ's economic villager.
+ * Jin has both regular and mounted villagers; mounted production must be explicitly selected.
  */
 export const getVillagerStats = (
   allUnits: UnitData[],
-  civ: string
+  civ: string,
+  villagerType: 'regular' | 'mounted' = 'regular'
 ): VillagerStats => {
   const civVillagers = allUnits.filter(
     u => u.civs.includes(civ) && u.classes?.includes('villager')
   );
 
-  // Civs with multiple villager units: prefer the mounted villager (Jin)
-  const villagerUnit =
-    civVillagers.find(u => u.classes?.includes('mounted_villager')) ??
-    civVillagers[0];
+  const villagerUnit = civVillagers.find(u =>
+    Boolean(u.classes?.includes('mounted_villager')) === (civ === 'jin' && villagerType === 'mounted')
+  );
 
   if (villagerUnit) {
     return {
@@ -52,27 +84,12 @@ export const getVillagerStats = (
 // ── Jin Dynasty constants ──
 
 /**
- * Mounted Villager gather multiplier (Jin Dynasty).
- * Source: Age of Empires Series Wiki (Mounted Villager) — "gather 120% faster and carry 5
- * additional resources from all resource types, except from Farms, from which they only gather
- * 90% faster". Farms have no walk/return component, so the 90% (= 1.9x) figure is the raw work
- * rate multiplier; the 120% figure is the all-in throughput gain (extra carry capacity + higher
- * move speed 1.42 vs 1.12). BASE_RATES here are raw work rates, so 1.9x applies.
+ * Estimated Mounted Villager work-rate multipliers, excluding travel/deposit cycles.
+ * Community measurements: https://www.youtube.com/watch?v=P7mG9TBlBLo
+ * Not verified against the current patch; surfaced as estimates in the UI.
  */
-export const MOUNTED_VILLAGER_GATHER_MULT = 1.9;
-
-/**
- * Passive food generated per Tributary State (Jin Dynasty), food per minute.
- * In-game each state spawns up to 8 Tributary Farms + Peasants that trickle food continuously,
- * ramping over ~4 minutes; a flat per-minute rate is used here as a simplification.
- */
-export const TRIBUTARY_FOOD_RATE = 60;
-
-/**
- * Fallback training time (seconds) for units whose costs.time is missing from the live API
- * (e.g., horseman, iron pagoda, mohe tribesman, scout). Without it, 60 / undefined = NaN.
- */
-export const DEFAULT_UNIT_TRAIN_TIME = 30;
+export const MOUNTED_VILLAGER_GATHER_MULT = 2.2;
+export const MOUNTED_VILLAGER_FARM_MULT = 1.9;
 
 export const BASE_RATES = {
   food_sheep: 40,
@@ -187,15 +204,6 @@ export const getEffectiveRates = (
     silverRate *= 1.28;
   }
 
-  // Jin Dynasty: Mounted Villagers gather resources faster than regular villagers
-  if (civ === 'jin') {
-    foodRate *= MOUNTED_VILLAGER_GATHER_MULT;
-    woodRate *= MOUNTED_VILLAGER_GATHER_MULT;
-    goldRate *= MOUNTED_VILLAGER_GATHER_MULT;
-    stoneRate *= MOUNTED_VILLAGER_GATHER_MULT;
-    oliveoilRate *= MOUNTED_VILLAGER_GATHER_MULT;
-    silverRate *= MOUNTED_VILLAGER_GATHER_MULT;
-  }
 
   return { food: foodRate, wood: woodRate, gold: goldRate, stone: stoneRate, oliveoil: oliveoilRate, silver: silverRate };
 };
@@ -209,7 +217,8 @@ export const calculateRPM = (
   activeTechs: string[],
   ovooCount?: number,
   sacredSites?: number,
-  tributaries?: number
+  tributaries?: number,
+  jin: JinEconomy = {}
 ): ResourceSet => {
   let rpm: ResourceSet = {
     food: 0,
@@ -262,14 +271,21 @@ export const calculateRPM = (
     silver_with_techs *= 1.28;
   }
 
-  // Jin Dynasty: Mounted Villagers gather resources faster than regular villagers
+  // Mounted counts are additional workers, not a bonus on every Jin villager.
   if (civ === 'jin') {
-    food_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
-    wood_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
-    gold_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
-    stone_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
-    oliveoil_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
-    silver_with_techs *= MOUNTED_VILLAGER_GATHER_MULT;
+    const mounted = normalizeMountedVillagers(jin.mountedVillagers, age, tributaries);
+    const mountedFood =
+      (mounted.food_sheep * BASE_RATES.food_sheep +
+        mounted.food_berries * BASE_RATES.food_berries +
+        mounted.food_deer * BASE_RATES.food_deer +
+        mounted.food_boar * BASE_RATES.food_boar) * MOUNTED_VILLAGER_GATHER_MULT +
+      mounted.food_farms * BASE_RATES.food_farms * MOUNTED_VILLAGER_FARM_MULT;
+    food_with_techs += mountedFood * m.food_mult;
+    wood_with_techs += mounted.wood * BASE_RATES.wood * MOUNTED_VILLAGER_GATHER_MULT * m.wood_mult;
+    gold_with_techs += mounted.gold * BASE_RATES.gold * MOUNTED_VILLAGER_GATHER_MULT * m.gold_mult;
+    stone_with_techs += mounted.stone * BASE_RATES.stone * MOUNTED_VILLAGER_GATHER_MULT * m.stone_mult;
+    oliveoil_with_techs += mounted.oliveoil * BASE_RATES.oliveoil * MOUNTED_VILLAGER_GATHER_MULT * m.oliveoil_mult;
+    silver_with_techs += mounted.silver * BASE_RATES.silver * MOUNTED_VILLAGER_GATHER_MULT * m.silver_mult;
   }
 
   rpm.food += food_with_techs;
@@ -285,9 +301,7 @@ export const calculateRPM = (
   }
 
   // Jin Dynasty: Tributary States generate passive food
-  if (civ === 'jin' && tributaries && tributaries > 0) {
-    rpm.food += TRIBUTARY_FOOD_RATE * tributaries;
-  }
+  rpm.food += getTributaryFood(civ, age, tributaries, jin.tributaryFoodRate);
 
   if (sacredSites && sacredSites > 0) {
     const siteRate = civ === 'de' ? 150 : 100;
@@ -316,15 +330,20 @@ export const calculateProductionDrain = (
   activeUnits: ProductionUnit[],
   allUnits: UnitData[],
   civ: string
-): { perUnit: UnitDrain[]; total: ResourceSet } => {
+): { perUnit: UnitDrain[]; total: ResourceSet; missingTimeUnits: string[] } => {
   const total: ResourceSet = { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 };
   const perUnit: UnitDrain[] = [];
+  const missingTimeUnits: string[] = [];
 
   activeUnits.forEach(au => {
     const uDef = allUnits.find(u => u.id === au.id && u.civs.includes(civ));
     if (!uDef) return;
 
-    const time = uDef.costs.time || DEFAULT_UNIT_TRAIN_TIME;
+    const time = uDef.costs.time;
+    if (typeof time !== 'number' || !Number.isFinite(time) || time <= 0) {
+      missingTimeUnits.push(uDef.id);
+      return;
+    }
     const foodCost = uDef.costs.food || 0;
     const woodCost = uDef.costs.wood || 0;
     const goldCost = uDef.costs.gold || 0;
@@ -353,7 +372,7 @@ export const calculateProductionDrain = (
     total.stone += unitDrain.stone;
   });
 
-  return { perUnit, total };
+  return { perUnit, total, missingTimeUnits };
 };
 
 // ── Resource Mode output: max sustainable units given current RPM ──
@@ -372,7 +391,6 @@ export const calculateMaxProduction = (
   ovooDoubleProduction: boolean
 ): MaxProductionEntry[] => {
   return availableUnits.map(u => {
-    const time = u.costs.time || DEFAULT_UNIT_TRAIN_TIME;
     const foodCost = u.costs.food || 0;
     const woodCost = u.costs.wood || 0;
     const goldCost = u.costs.gold || 0;
@@ -384,25 +402,13 @@ export const calculateMaxProduction = (
       stoneCost += (foodCost + woodCost + goldCost);
     }
 
-    // Cost per unit per minute from a single building
-    const costPerUnitPerMin = {
-      food: foodCost > 0 ? (foodCost / time) * 60 : 0,
-      wood: woodCost > 0 ? (woodCost / time) * 60 : 0,
-      gold: goldCost > 0 ? (goldCost / time) * 60 : 0,
-      stone: stoneCost > 0 ? (stoneCost / time) * 60 : 0,
-    };
-
-    // Max sustainable buildings = min across all resources that have a cost
+    // Income-limited units/min depends on cost, not training time or building count.
     const limits: number[] = [];
-    if (costPerUnitPerMin.food > 0) limits.push(rpm.food / costPerUnitPerMin.food);
-    if (costPerUnitPerMin.wood > 0) limits.push(rpm.wood / costPerUnitPerMin.wood);
-    if (costPerUnitPerMin.gold > 0) limits.push(rpm.gold / costPerUnitPerMin.gold);
-    if (costPerUnitPerMin.stone > 0) limits.push(rpm.stone / costPerUnitPerMin.stone);
-
-    // limits gives max buildings sustainable; convert to UPM
-    const maxBuildings = limits.length > 0 ? Math.min(...limits) : Infinity;
-    const upmPerBuilding = (60 / time) * upmMultiplier;
-    const maxSustainable = maxBuildings === Infinity ? Infinity : maxBuildings * upmPerBuilding;
+    if (foodCost > 0) limits.push(rpm.food / foodCost);
+    if (woodCost > 0) limits.push(rpm.wood / woodCost);
+    if (goldCost > 0) limits.push(rpm.gold / goldCost);
+    if (stoneCost > 0) limits.push(rpm.stone / stoneCost);
+    const maxSustainable = limits.length > 0 ? Math.min(...limits) * upmMultiplier : Infinity;
 
     return {
       unitId: u.id,
@@ -421,6 +427,7 @@ export interface RequiredVillagers {
   gold: number;
   stone: number;
   total: number;
+  missingTimeUnits: string[];
 }
 
 export const calculateRequiredVillagers = (
@@ -432,13 +439,14 @@ export const calculateRequiredVillagers = (
   ovooCount?: number,
   sacredSites?: number,
   tcProducingVillagers: number = 0,
-  tributaries?: number
+  tributaries?: number,
+  jin: JinEconomy = {}
 ): RequiredVillagers => {
-  const { total: drain } = calculateProductionDrain(activeUnits, allUnits, civ);
+  const { total: drain, missingTimeUnits } = calculateProductionDrain(activeUnits, allUnits, civ);
   const rates = getEffectiveRates(civ, age, activeTechs);
 
   // Get villager stats dynamically from API data
-  const villagerStats = getVillagerStats(allUnits, civ);
+  const villagerStats = getVillagerStats(allUnits, civ, jin.villagerType);
   const VILLAGER_FOOD_COST = villagerStats.cost;
   const VILLAGER_GOLD_COST = villagerStats.goldCost;
   const VILLAGER_TIME = villagerStats.time;
@@ -463,9 +471,7 @@ export const calculateRequiredVillagers = (
   }
 
   // Jin Dynasty: Tributary States generate passive food — no villagers needed for that part
-  if (civ === 'jin' && tributaries && tributaries > 0) {
-    foodDrain = Math.max(0, foodDrain - TRIBUTARY_FOOD_RATE * tributaries);
-  }
+  foodDrain = Math.max(0, foodDrain - getTributaryFood(civ, age, tributaries, jin.tributaryFoodRate));
 
   const foodVills = rates.food > 0 ? Math.ceil(foodDrain / rates.food) : 0;
   const woodVills = rates.wood > 0 ? Math.ceil(drain.wood / rates.wood) : 0;
@@ -481,6 +487,7 @@ export const calculateRequiredVillagers = (
     gold: goldVills,
     stone: stoneVills,
     total: foodVills + woodVills + goldVills + stoneVills,
+    missingTimeUnits,
   };
 };
 
@@ -502,11 +509,12 @@ export const calculateVillagerProduction = (
   tcProducingVillagers: number,
   unitDrain: ResourceSet,
   allUnits?: UnitData[],
-  civ?: string
+  civ?: string,
+  villagerType: 'regular' | 'mounted' = 'regular'
 ): VillagerProductionAnalysis => {
   // Get villager stats dynamically from API data
   const villagerStats = (allUnits && civ) 
-    ? getVillagerStats(allUnits, civ)
+    ? getVillagerStats(allUnits, civ, villagerType)
     : { cost: 50, goldCost: 0, time: 20 };
   
   const VILLAGER_FOOD_COST = villagerStats.cost;

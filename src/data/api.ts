@@ -8,7 +8,7 @@ export interface Cost {
   wood: number;
   gold: number;
   stone: number;
-  time: number;
+  time?: number;
   popcap?: number;
 }
 

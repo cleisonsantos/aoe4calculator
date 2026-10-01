@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCalculatorStore, type VillagerAllocation as VAlloc } from '../store/useCalculatorStore';
+import { getMountedVillagerLimit } from '../utils/calculator';
 
 const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources';
 
@@ -30,9 +31,11 @@ const labels: Record<keyof VAlloc, string> = {
 };
 
 export const VillagerAllocator = () => {
-  const { villagers, setVillagers } = useCalculatorStore();
+  const { villagers, setVillagers, mountedVillagers, setMountedVillagers, civ, age, tributaries } = useCalculatorStore();
+  const mountedTotal = Object.values(mountedVillagers).reduce((a, b) => a + b, 0);
+  const mountedLimit = getMountedVillagerLimit(age, tributaries);
 
-  const totalVills = Object.values(villagers).reduce((a, b) => a + b, 0);
+  const totalVills = Object.values(villagers).reduce((a, b) => a + b, 0) + (civ === 'jin' ? mountedTotal : 0);
 
   const renderAllocator = (key: keyof VAlloc, showLabel = true) => (
     <div key={key} className="flex flex-col gap-2 p-2 bg-slate-50 rounded-md border border-slate-100">
@@ -44,12 +47,28 @@ export const VillagerAllocator = () => {
         />
         <span className="text-xs font-bold text-slate-700">{labels[key]}</span>
       </div>
+      {civ === 'jin' && (
+        <label className="flex items-center gap-2 text-xs text-slate-500">
+          Mounted
+          <input
+            type="number"
+            min="0"
+            max={mountedLimit - mountedTotal + mountedVillagers[key]}
+            value={mountedVillagers[key]}
+            onChange={(e) => setMountedVillagers(key, Number(e.target.value))}
+            aria-label={`${labels[key]} mounted villagers`}
+            className="w-full p-2 border rounded text-center font-mono bg-white"
+          />
+        </label>
+      )}
       
       <div className="flex items-center">
+        {civ === 'jin' && <span className="text-xs text-slate-500 mr-2">Regular</span>}
         <input 
           type="number" 
           min="0"
           max="200"
+          aria-label={`${labels[key]} regular villagers`}
           value={villagers[key]}
           onChange={(e) => {
             let val = parseInt(e.target.value, 10);
@@ -73,6 +92,13 @@ export const VillagerAllocator = () => {
         </h3>
       </div>
       
+      {civ === 'jin' && (
+        <p className="text-xs text-slate-500 mb-4">
+          Mounted Villagers: {mountedTotal}/{mountedLimit}. Estimated work rates: 2.2× outside farms,
+          1.9× on farms; travel and deposits are not modeled. These multipliers are based on
+          community measurements, not verified for the current patch.
+        </p>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Food Column */}
         <div className="flex flex-col gap-3">

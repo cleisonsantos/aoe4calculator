@@ -5,12 +5,12 @@ import { getVillagerStats } from '../utils/calculator';
 import { Home } from 'lucide-react';
 
 export const TownCenterSelector = () => {
-  const { tcProducingVillagers, setTcProducingVillagers, age, civ } = useCalculatorStore();
+  const { tcProducingVillagers, setTcProducingVillagers, age, civ, villagerType, setVillagerType } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
   // Villager stats are civ-specific (e.g., Jin's Mounted Villager: 65F + 50G, 35s)
   const villagerStats = (allUnits?.length && civ)
-    ? getVillagerStats(allUnits, civ)
+    ? getVillagerStats(allUnits, civ, villagerType)
     : { cost: 50, goldCost: 0, time: 20 };
   const villagersPerMinutePerTc = 60 / villagerStats.time;
 
@@ -30,6 +30,25 @@ export const TownCenterSelector = () => {
         How many TCs are continuously producing villagers. This affects whether you can sustain both villager and unit production.
       </p>
 
+      {civ === 'jin' && (
+        <label className="block text-sm text-slate-600 mb-4">
+          Villager type produced by all selected TCs
+          <select
+            value={villagerType}
+            onChange={(e) => setVillagerType(e.target.value as 'regular' | 'mounted')}
+            className="block mt-2 p-2 border rounded bg-white"
+          >
+            <option value="regular">Regular Villager</option>
+            <option value="mounted">Mounted Villager</option>
+          </select>
+          {villagerType === 'mounted' && (
+            <span className="block text-xs mt-2">
+              Production drain applies only while below the Mounted Villager limit.
+              Required economy is expressed in regular villagers.
+            </span>
+          )}
+        </label>
+      )}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setTcProducingVillagers(Math.max(0, tcProducingVillagers - 1))}

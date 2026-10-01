@@ -9,6 +9,7 @@ import {
 } from '../utils/calculator';
 import { CostDisplay } from './ResourceIcon';
 import { useAoE4Data } from '../hooks/useAoE4Data';
+import { type UnitData } from '../data/api';
 import { Pickaxe, Swords, Users, Home, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources';
@@ -26,10 +27,10 @@ export const OutputDashboard = () => {
 // ── Resource Mode: show RPM + max sustainable production ──
 
 const ResourceModeOutput = () => {
-  const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, tributaries } = useCalculatorStore();
+  const { villagers, mountedVillagers, tributaryFoodRate, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, tributaries } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries);
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate });
 
   // Available military units for this civ/age, dedup by baseId (keep highest age)
   const availableUnits = Object.values(
@@ -110,14 +111,15 @@ const UnitsModeOutput = () => {
     civ, age, activeTechs,
     units: activeUnits,
     ovooCount, ovooDoubleProduction, sacredSites, tributaries,
-    tcProducingVillagers, villagers
+    tcProducingVillagers, villagerType, tributaryFoodRate
   } = useCalculatorStore();
-  const { units: allUnits } = useAoE4Data();
+  const { units: allUnits, loading, error } = useAoE4Data();
+  const jin = { villagerType, tributaryFoodRate };
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
     ovooCount, sacredSites,
-    tcProducingVillagers, tributaries
+    tcProducingVillagers, tributaries, jin
   );
 
   const { perUnit, total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
@@ -133,8 +135,21 @@ const UnitsModeOutput = () => {
     oliveoil: 0,
     silver: 0
   };
-  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, tributaries);
-  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ);
+  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, tributaries, jin);
+  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ, villagerType);
+
+  if (loading || error) {
+    return <p className="text-sm text-slate-500">{error ? 'Unit data unavailable.' : 'Loading unit data...'}</p>;
+  }
+  if (required.missingTimeUnits.length > 0) {
+    const names = required.missingTimeUnits.map(id => allUnits.find(u => u.id === id && u.civs.includes(civ))?.name ?? id);
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+        Production calculation unavailable: the live API does not provide a valid training time
+        for {names.join(', ')}. No default time or incomplete economy total is assumed.
+      </div>
+    );
+  }
 
   return (
     <>
@@ -144,6 +159,12 @@ const UnitsModeOutput = () => {
           <Users className="w-5 h-5 text-[var(--civ-primary)]" />
           Required Villagers
         </h3>
+        {civ === 'jin' && (
+          <p className="text-xs text-slate-500 mb-4">
+            Economy expressed in regular villagers using farms for food.
+            Use Resource Mode to model a mix of regular and mounted workers.
+          </p>
+        )}
 
         {activeUnits.length === 0 ? (
           <p className="text-sm text-slate-400 italic">Select units to see the required economy.</p>
@@ -283,7 +304,7 @@ const UnitsModeOutput = () => {
             <div className="p-3 bg-slate-50 rounded border border-slate-100">
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Max TCs Supported</div>
               <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.maxTcForCurrentFood}</div>
-              <div className="text-xs text-slate-500 mt-1">with current food surplus</div>
+              <div className="text-xs text-slate-500 mt-1">with current food and gold surplus</div>
             </div>
           </div>
         </div>
