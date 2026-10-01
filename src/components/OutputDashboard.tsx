@@ -10,6 +10,7 @@ import {
 } from '../utils/calculator';
 import { CostDisplay } from './ResourceIcon';
 import { useAoE4Data } from '../hooks/useAoE4Data';
+import type { UnitData } from '../data/api';
 import { Pickaxe, Swords, Users, Home, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const RESOURCE_BASE_URL = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources';
@@ -25,8 +26,8 @@ export const OutputDashboard = () => {
 // ── Resource Mode: show RPM + max sustainable production ──
 
 export const RpmBar = () => {
-  const { villagers, civ, age, activeTechs, ovooCount, sacredSites, relics } = useCalculatorStore();
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, relics);
+  const { villagers, mountedVillagers, tributaryFoodRate, tributaries, civ, age, activeTechs, ovooCount, sacredSites, relics } = useCalculatorStore();
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
@@ -51,10 +52,9 @@ export const RpmBar = () => {
 };
 
 export const MaxProductionGrid = () => {
-  const { villagers, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, relics } = useCalculatorStore();
+  const { villagers, mountedVillagers, tributaryFoodRate, tributaries, villagerType, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, relics } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
-
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, relics);
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics);
 
   const availableUnits = Object.values(
     allUnits
@@ -68,9 +68,13 @@ export const MaxProductionGrid = () => {
 
   const maxProd = calculateMaxProduction(rpm, availableUnits, civ, ovooDoubleProduction);
 
-  const villagerStats = getVillagerStats(allUnits, civ);
-  const maxVillagersPerMin = villagerStats.cost > 0 ? +(rpm.food / villagerStats.cost).toFixed(1) : 0;
-  const villagerUnit = allUnits.find(u => u.civs.includes(civ) && u.classes?.includes('villager'));
+  const villagerStats = getVillagerStats(allUnits, civ, villagerType);
+  const maxVillagersPerMin = Math.min(
+    villagerStats.cost > 0 ? rpm.food / villagerStats.cost : Infinity,
+    villagerStats.goldCost > 0 ? rpm.gold / villagerStats.goldCost : Infinity
+  );
+  const villagerUnit = allUnits.find(u => u.civs.includes(civ) && u.classes?.includes('villager')
+    && Boolean(u.classes?.includes('mounted_villager')) === (civ === 'jin' && villagerType === 'mounted'));
 
   const sorted = [
     ...maxProd,
@@ -100,7 +104,7 @@ export const MaxProductionGrid = () => {
             ? villagerUnit
             : allUnits.find(u => u.id === entry.unitId && u.civs.includes(civ));
           const costs = isVillager
-            ? { food: villagerStats.cost, time: villagerStats.time }
+            ? { food: villagerStats.cost, gold: villagerStats.goldCost, time: villagerStats.time }
             : uDef?.costs;
           return (
             <div
@@ -122,17 +126,25 @@ export const MaxProductionGrid = () => {
 // ── Units Mode: show required villagers for desired production ──
 
 export const RequiredVillagersBar = () => {
-  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, relics, tcProducingVillagers } = useCalculatorStore();
-  const { units: allUnits } = useAoE4Data();
+  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, relics, tcProducingVillagers, tributaries, villagerType, tributaryFoodRate } = useCalculatorStore();
+  const { units: allUnits, loading, error } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
-    ovooCount, sacredSites, relics,
-    tcProducingVillagers
+    ovooCount, sacredSites,
+    tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate }, relics
   );
+  if (loading || error) return <p className="text-sm text-slate-500">{error ? 'Unit data unavailable.' : 'Loading unit data...'}</p>;
+  if (required.missingTimeUnits.length > 0) return <ProductionUnavailable ids={required.missingTimeUnits} units={allUnits} civ={civ} />;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+      {civ === 'jin' && (
+        <p className="text-xs text-slate-500 mb-3">
+          Economy expressed in regular villagers using farms for food.
+          Use Resource Mode to model a mix of regular and mounted workers.
+        </p>
+      )}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-[var(--civ-primary)]" />
@@ -169,9 +181,10 @@ export const ProductionSummary = () => {
   const { civ, units: activeUnits } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
-  const { perUnit } = calculateProductionDrain(activeUnits, allUnits, civ);
+  const { perUnit, missingTimeUnits } = calculateProductionDrain(activeUnits, allUnits, civ);
 
   if (activeUnits.length === 0) return null;
+  if (missingTimeUnits.length > 0) return <ProductionUnavailable ids={missingTimeUnits} units={allUnits} civ={civ} />;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
@@ -216,29 +229,31 @@ const UnitsModeOutput = () => {
     civ, age, activeTechs,
     units: activeUnits,
     ovooCount, ovooDoubleProduction, sacredSites, relics,
-    tcProducingVillagers, villagers
+    tcProducingVillagers, villagers, villagerType, tributaries, tributaryFoodRate
   } = useCalculatorStore();
-  const { units: allUnits } = useAoE4Data();
+  const { units: allUnits, loading, error } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
-    ovooCount, sacredSites, relics,
-    tcProducingVillagers
+    ovooCount, sacredSites,
+    tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate }, relics
   );
 
   const { total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ);
-  
+
   const requiredVillagersAllocation = {
     food_sheep: 0, food_berries: 0, food_deer: 0, food_boar: 0,
-    food_farms: required.food,
+    food_farms: required.food, food_fish: 0, food_deep_fish: 0,
     wood: required.wood,
     gold: required.gold,
     stone: required.stone,
     oliveoil: 0,
     silver: 0
   };
-  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, relics);
-  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ);
+  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { tributaryFoodRate }, relics);
+  const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ, villagerType);
+  if (loading || error) return <p className="text-sm text-slate-500">{error ? 'Unit data unavailable.' : 'Loading unit data...'}</p>;
+  if (required.missingTimeUnits.length > 0) return null;
 
   return (
     <>
@@ -249,10 +264,10 @@ const UnitsModeOutput = () => {
             <Home className="w-5 h-5 text-[var(--civ-primary)]" />
             Villager Production Analysis
           </h3>
-          
+
           <div className={`mb-3 p-3 rounded-lg border-2 ${
-            villagerAnalysis.canProduceSimultaneously 
-              ? 'bg-green-50 border-green-200' 
+            villagerAnalysis.canProduceSimultaneously
+              ? 'bg-green-50 border-green-200'
               : 'bg-red-50 border-red-200'
           }`}>
             <div className="flex items-center gap-2 mb-2">
@@ -264,17 +279,19 @@ const UnitsModeOutput = () => {
               <span className={`font-bold ${
                 villagerAnalysis.canProduceSimultaneously ? 'text-green-800' : 'text-red-800'
               }`}>
-                {villagerAnalysis.canProduceSimultaneously 
-                  ? 'Can Produce Both Simultaneously' 
-                  : 'Food Conflict - Not Enough for Both'}
+                {villagerAnalysis.canProduceSimultaneously
+                  ? 'Can Produce Both Simultaneously'
+                  : 'Resource Conflict - Not Enough for Both'}
               </span>
             </div>
             <p className={`text-sm ${
               villagerAnalysis.canProduceSimultaneously ? 'text-green-700' : 'text-red-700'
             }`}>
-              {villagerAnalysis.canProduceSimultaneously 
+              {villagerAnalysis.canProduceSimultaneously
                 ? `Your economy can sustain both unit production and ${villagerAnalysis.villagerProductionRate} villagers/min`
-                : `You need ${Math.abs(villagerAnalysis.foodSurplus)} more food/min to sustain both`
+                : villagerAnalysis.goldSurplus < 0
+                  ? `You need ${Math.abs(villagerAnalysis.goldSurplus)} more gold/min to sustain both`
+                  : `You need ${Math.abs(villagerAnalysis.foodSurplus)} more food/min to sustain both`
               }
             </p>
           </div>
@@ -289,6 +306,9 @@ const UnitsModeOutput = () => {
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Drain (Vills)</div>
               <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.foodDrainFromVillagers} <span className="text-sm font-normal text-slate-500">/min</span></div>
               <div className="text-xs text-slate-500 mt-1">Dynamic villager cost based on civ</div>
+              {villagerAnalysis.goldDrainFromVillagers > 0 && (
+                <div className="text-xs font-medium text-amber-600 mt-1">+ {villagerAnalysis.goldDrainFromVillagers} gold/min</div>
+              )}
             </div>
             <div className="p-3 bg-slate-50 rounded border border-slate-100">
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Food Surplus</div>
@@ -300,7 +320,7 @@ const UnitsModeOutput = () => {
             <div className="p-3 bg-slate-50 rounded border border-slate-100">
               <div className="text-xs text-slate-500 font-medium uppercase mb-1">Max TCs Supported</div>
               <div className="text-2xl font-bold text-slate-800">{villagerAnalysis.maxTcForCurrentFood}</div>
-              <div className="text-xs text-slate-500 mt-1">with current food surplus</div>
+              <div className="text-xs text-slate-500 mt-1">with current food and gold surplus</div>
             </div>
           </div>
         </div>
@@ -310,6 +330,13 @@ const UnitsModeOutput = () => {
 };
 
 // ── Shared small components ──
+const ProductionUnavailable = ({ ids, units, civ }: { ids: string[]; units: UnitData[]; civ: string }) => (
+  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+    Production calculation unavailable: the live API does not provide a valid training time
+    for {ids.map(id => units.find(u => u.id === id && u.civs.includes(civ))?.name ?? id).join(', ')}.
+    No default time or incomplete economy total is assumed.
+  </div>
+);
 
 const ResourceCard = ({ iconUrl, label, value }: { iconUrl: string; label: string; value: number }) => (
   <div className="flex items-center p-3 rounded bg-slate-50 border border-slate-100 gap-3">
@@ -322,5 +349,3 @@ const ResourceCard = ({ iconUrl, label, value }: { iconUrl: string; label: strin
     </div>
   </div>
 );
-
-

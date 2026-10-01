@@ -1,11 +1,11 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
-import { calculateRPM, getVillagerStats, getEffectiveRates } from '../utils/calculator';
+import { calculateRPM, calculateVillagerProduction, getVillagerStats, getEffectiveRates } from '../utils/calculator';
 import { Home, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 export const TownCenterSelector = () => {
-  const { tcProducingVillagers, setTcProducingVillagers, age, mode, civ, villagers, activeTechs } = useCalculatorStore();
+  const { tcProducingVillagers, setTcProducingVillagers, age, mode, civ, villagers, activeTechs, mountedVillagers, villagerType, setVillagerType, tributaries, tributaryFoodRate, ovooCount, sacredSites, relics } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
 
   // Max TCs: only the starting TC in Dark Age; no hard cap from Feudal+
@@ -13,15 +13,15 @@ export const TownCenterSelector = () => {
 
   // ── TC Food Sustainability Analysis (Resource Mode) ──
   const villagerStats = (allUnits?.length && civ)
-    ? getVillagerStats(allUnits, civ)
-    : { cost: 50, time: 20 };
+    ? getVillagerStats(allUnits, civ, villagerType)
+    : { cost: 50, goldCost: 0, time: 20 };
 
   const villagersPerMinutePerTc = 60 / villagerStats.time;
   const foodDrainPerTc = villagersPerMinutePerTc * villagerStats.cost;
   const totalFoodDrain = tcProducingVillagers * foodDrainPerTc;
 
   const rpm = (allUnits?.length && civ)
-    ? calculateRPM(villagers, civ, age, activeTechs)
+    ? calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics)
     : { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 };
 
   const currentFoodRpm = rpm.food;
@@ -31,9 +31,12 @@ export const TownCenterSelector = () => {
     ? getEffectiveRates(civ, age, activeTechs)
     : { food: 40, wood: 40, gold: 40, stone: 40, oliveoil: 40, silver: 40 };
   const suggestedFoodVills = totalFoodDrain > 0 ? Math.ceil(totalFoodDrain / effRates.food) : 0;
-  const maxTcSupported = currentFoodRpm > 0 ? Math.floor(currentFoodRpm / foodDrainPerTc) : 0;
+  const analysis = calculateVillagerProduction(rpm, tcProducingVillagers,
+    { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 }, allUnits, civ, villagerType);
+  const maxTcSupported = analysis.maxTcForCurrentFood;
 
-  const currentFoodVills = villagers.food_sheep + villagers.food_berries + villagers.food_deer + villagers.food_boar + villagers.food_farms + villagers.food_fish + villagers.food_deep_fish;
+  const currentFoodVills = villagers.food_sheep + villagers.food_berries + villagers.food_deer + villagers.food_boar + villagers.food_farms + villagers.food_fish + villagers.food_deep_fish
+    + (civ === 'jin' ? Object.entries(mountedVillagers).reduce((sum, [key, count]) => sum + (key.startsWith('food_') ? count : 0), 0) : 0);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
@@ -48,6 +51,25 @@ export const TownCenterSelector = () => {
         How many TCs are continuously producing villagers. This affects whether you can sustain both villager and unit production.
       </p>
 
+      {civ === 'jin' && (
+        <label className="block text-sm text-slate-600 mb-4">
+          Villager type produced by all selected TCs
+          <select
+            value={villagerType}
+            onChange={(e) => setVillagerType(e.target.value as 'regular' | 'mounted')}
+            className="block mt-2 p-2 border rounded bg-white"
+          >
+            <option value="regular">Regular Villager</option>
+            <option value="mounted">Mounted Villager</option>
+          </select>
+          {villagerType === 'mounted' && (
+            <span className="block text-xs mt-2">
+              Production drain applies only while below the Mounted Villager limit.
+              Required economy is expressed in regular villagers.
+            </span>
+          )}
+        </label>
+      )}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setTcProducingVillagers(Math.max(0, tcProducingVillagers - 1))}
@@ -71,7 +93,10 @@ export const TownCenterSelector = () => {
       {tcProducingVillagers > 0 && (
         <div className="mt-4 p-3 bg-[var(--civ-primary)]/5 border border-[var(--civ-primary)]/20 rounded-md">
           <div className="text-xs text-slate-600 font-medium">
-            🏠 {tcProducingVillagers} TC producing {tcProducingVillagers === 1 ? 'villager' : 'villagers'} → ~{Math.round(tcProducingVillagers * villagersPerMinutePerTc)}/min
+            🏠 {tcProducingVillagers} TC producing {tcProducingVillagers === 1 ? 'villager' : 'villagers'} → ~{Math.round(tcProducingVillagers * villagersPerMinutePerTc * 10) / 10}/min
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Villager cost: {villagerStats.cost}F{villagerStats.goldCost > 0 ? ` + ${villagerStats.goldCost}G` : ''} · {villagerStats.time}s each
           </div>
         </div>
       )}
@@ -80,27 +105,30 @@ export const TownCenterSelector = () => {
       {mode === 'resource' && tcProducingVillagers > 0 && (
         <div className="mt-4 space-y-3">
           <div className={`p-3 rounded-lg border-2 ${
-            foodSurplus >= 0
+            analysis.canProduceSimultaneously
               ? 'bg-green-50 border-green-200'
               : 'bg-amber-50 border-amber-200'
           }`}>
             <div className="flex items-center gap-2 mb-2">
-              {foodSurplus >= 0 ? (
+              {analysis.canProduceSimultaneously ? (
                 <CheckCircle className="w-5 h-5 text-green-600" />
               ) : (
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               )}
               <span className={`font-bold text-sm ${
-                foodSurplus >= 0 ? 'text-green-800' : 'text-amber-800'
+                analysis.canProduceSimultaneously ? 'text-green-800' : 'text-amber-800'
               }`}>
-                {foodSurplus >= 0
+                {analysis.canProduceSimultaneously
                   ? 'Can sustain TC production'
-                  : 'Not enough food for TCs'}
+                  : 'Not enough resources for TCs'}
               </span>
             </div>
             <p className={`text-xs ${
-              foodSurplus >= 0 ? 'text-green-700' : 'text-amber-700'
+              analysis.canProduceSimultaneously ? 'text-green-700' : 'text-amber-700'
             }`}>
+              {analysis.goldDrainFromVillagers > 0 && (
+                <span>TCs consume {analysis.goldDrainFromVillagers} gold/min; gold surplus: {analysis.goldSurplus}/min. </span>
+              )}
               {foodSurplus >= 0
                 ? `You produce ${currentFoodRpm} food/min. TCs consume ${Math.round(totalFoodDrain)} food/min. ${Math.round(foodSurplus)} food/min surplus.`
                 : `TCs need ${Math.round(totalFoodDrain)} food/min, but you only produce ${currentFoodRpm} food/min. Need ${Math.round(Math.abs(foodSurplus))} more food/min.`}
@@ -117,7 +145,7 @@ export const TownCenterSelector = () => {
               <div className={`text-lg font-bold ${currentFoodVills >= suggestedFoodVills ? 'text-green-600' : 'text-amber-600'}`}>
                 {suggestedFoodVills}
               </div>
-              <div className="text-[10px] text-slate-400">{Math.round(effRates.food)} food/min each</div>
+              <div className="text-[10px] text-slate-400">{Math.round(effRates.food)} food/min per regular farm worker</div>
             </div>
             <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
               <div className="text-[10px] text-slate-500 font-medium uppercase mb-1">Food drain from TCs</div>
@@ -129,10 +157,10 @@ export const TownCenterSelector = () => {
             </div>
           </div>
 
-          {tcProducingVillagers > maxTcSupported && (
+          {foodSurplus < 0 && (
             <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
               <Info className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
-              <span>You need {suggestedFoodVills - currentFoodVills} more villagers on food (or improve your food gather rate with techs) to sustain {tcProducingVillagers} TCs.</span>
+              <span>You need more food income (or improve your food gather rate with techs) to sustain {tcProducingVillagers} TCs.</span>
             </div>
           )}
         </div>
