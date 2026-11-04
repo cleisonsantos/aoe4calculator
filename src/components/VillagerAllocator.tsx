@@ -121,12 +121,12 @@ export const VillagerAllocator = () => {
         {renderAllocator('food_berries')}
         {renderAllocator('food_deer')}
         {renderAllocator('food_boar')}
-        {renderAllocator('food_farms')}
+        {civ !== 'mo' && renderAllocator('food_farms')}
         {renderAllocator('food_fish')}
         {renderAllocator('food_deep_fish')}
         {renderAllocator('wood')}
         {renderAllocator('gold')}
-        {renderAllocator('stone')}
+        {civ !== 'mo' && renderAllocator('stone')}
         {renderAllocator('oliveoil')}
         {renderAllocator('silver')}
       </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { fetchUnits, fetchTechnologies, type UnitData, type TechData } from '../data/api';
+import { fetchUnits, fetchTechnologies, fetchBuildings, type BuildingData, type UnitData, type TechData } from '../data/api';
 
 interface AoE4Data {
   units: UnitData[];
   technologies: TechData[];
+  buildings?: BuildingData[];
   loading: boolean;
   error: string | null;
 }
@@ -21,15 +22,17 @@ export const useAoE4Data = () => {
 
     const loadData = async () => {
       try {
-        const [unitsData, techsData] = await Promise.all([
+        const [unitsData, techsData, buildingsData] = await Promise.all([
           fetchUnits(),
           fetchTechnologies(),
+          fetchBuildings().catch(() => []),
         ]);
 
         if (mounted) {
           setData({
             units: unitsData,
             technologies: techsData,
+            buildings: buildingsData,
             loading: false,
             error: null,
           });

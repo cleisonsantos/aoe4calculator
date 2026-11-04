@@ -13,13 +13,14 @@ const CORE_ECO_TECHS = {
 };
 
 export const TechSelector = ({ techs }: { techs: any[] }) => {
-  const { civ, activeTechs, toggleTech } = useCalculatorStore();
+  const { civ, age, activeTechs, toggleTech, ovooCount, mongolEconomy } = useCalculatorStore();
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const influence = ovooCount > 0 || (age >= 4 && mongolEconomy.whiteStupa);
 
   const getTechForCiv = (baseId: string) => {
     const matches = techs.filter(t => t.baseId === baseId);
     const exact = matches.find(t => t.civs.includes(civ));
-    return exact || matches[0];
+    return civ === 'mo' ? exact : exact || matches[0];
   };
 
   const renderTechTier = (title: string, techIds: string[]) => (
@@ -31,6 +32,7 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
           if (!tech) return null;
 
           const isActive = activeTechs.includes(id);
+          if (civ === 'mo' && (tech.age > age || (id.endsWith('-improved') && !influence && !isActive))) return null;
 
           return (
               <button
@@ -92,7 +94,10 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
           {renderTechTier('Age 2 Upgrades', CORE_ECO_TECHS.tier2)}
           {renderTechTier('Ovoo Improved (Age 2)', CORE_ECO_TECHS.improved_tier2)}
           {renderTechTier('Age 3 Upgrades', CORE_ECO_TECHS.tier3)}
-          {renderTechTier('Age 4 Upgrades', CORE_ECO_TECHS.tier4)}
+          {renderTechTier('Age 4 Upgrades', civ === 'mo' ? ['crosscut-saw', 'precision-cross-breeding', 'cupellation'] : CORE_ECO_TECHS.tier4)}
+          {civ === 'mo' && renderTechTier('Production & Relics', ['military-academy', 'military-academy-improved', 'tithe-barns', 'tithe-barns-improved'])}
+          {civ === 'mo' && <p className="text-xs text-amber-700">Military Academy uses the API description (+33%/+53% production speed); structured API effects disagree, so this is an estimate pending in-game verification.</p>}
+          {civ === 'mo' && <p className="text-xs text-slate-500">Improved research requires Ovoo or White Stupa influence. Researched upgrades remain active after influence is lost. Monastic Shrines influence is not modeled. Normal and improved versions replace one another. Wheelbarrow and Forestry logistical effects are not modeled as exact flat gather bonuses.</p>}
         </div>
       )}
     </div>

@@ -8,13 +8,30 @@ const GOLD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/ass
 const FOOD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/food.png';
 
 export const PassiveGenerationSelector = () => {
-  const { civ, age, mode, ovooCount, ovooDoubleProduction, sacredSites, relics, setRelics, tributaries, tributaryFoodRate, setTributaryFoodRate, setOvoo, setSacredSites, setTributaries } = useCalculatorStore();
+  const { civ, age, mode, ovooCount, ovooDoubleProduction, sacredSites, relics, setRelics, tributaries, tributaryFoodRate, setTributaryFoodRate, setOvoo, setSacredSites, setTributaries, mongolEconomy, setMongolEconomy } = useCalculatorStore();
 
   const isMongolVariant = civ === 'mo' || civ === 'gol';
   const isJin = civ === 'jin';
 
   return (
     <div className="space-y-4">
+      {civ === 'mo' && (
+        <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
+          <h3 className="font-bold">Mongol Landmark Choices</h3>
+          {([
+            ['deerStones', 2, 'Deer Stones', 'Silver Tree'],
+            ['steppeRedoubt', 3, 'Steppe Redoubt', 'Kurultai'],
+            ['whiteStupa', 4, 'White Stupa', 'Khaganate Palace'],
+          ] as const).map(([key, minAge, selected, alternative]) => (
+            <label key={key} className="block text-sm">
+              <input type="checkbox" checked={Boolean(mongolEconomy[key])} disabled={age < minAge} onChange={e => setMongolEconomy({ [key]: e.target.checked })} className="mr-2" />
+              {selected} (Age {minAge}; alternative: {alternative})
+            </label>
+          ))}
+          <p className="text-xs text-slate-500">Unchecked means the alternative landmark (or not yet built). Alternatives are exclusive; only the listed economy effect is modeled.</p>
+          <p className="text-xs text-slate-500">Steppe Redoubt assumes all gold gatherers deposit there. White Stupa assumes selected double-production buildings are within its influence. Deer Stones movement benefits are not a flat gather-rate bonus.</p>
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 w-full border-l-4 border-l-amber-500">
         <div className="flex justify-between items-center mb-4 border-b pb-2 border-slate-100">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -74,7 +91,7 @@ export const PassiveGenerationSelector = () => {
                   <span className="text-sm font-medium text-slate-700">Ovoos</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {[0, 1, 2, 3].map((count) => (
+                  {(civ === 'mo' ? [0, 1] : [0, 1, 2, 3]).map((count) => (
                     <button
                       key={count}
                       onClick={() => setOvoo(count, ovooDoubleProduction)}

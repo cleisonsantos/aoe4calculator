@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useAoE4Data } from '../hooks/useAoE4Data';
 import { CivSelector } from './CivSelector';
@@ -10,10 +10,29 @@ import { PassiveGenerationSelector } from './PassiveGenerationSelector';
 import { ModeToggle } from './ModeToggle';
 import { ThemeToggle } from './ThemeToggle';
 import { TownCenterSelector } from './TownCenterSelector';
+import { isTrainableUnit } from '../utils/calculator';
 
 export const Calculator = () => {
-  const { loadFromUrl, mode } = useCalculatorStore();
+  const { loadFromUrl, mode, civ, age, mongolEconomy, units, setUnitProduction, activeTechs, toggleTech } = useCalculatorStore();
+  const [removedUnits, setRemovedUnits] = useState<string[]>([]);
   const data = useAoE4Data();
+
+  useEffect(() => {
+    if (data.loading || data.error) return;
+    const invalid = units.filter(selected => !data.units.some(unit => unit.id === selected.id && !unit.classes?.includes('ship') && isTrainableUnit(unit, civ, age, mongolEconomy)));
+    if (invalid.length) {
+      setRemovedUnits(invalid.map(selected => data.units.find(unit => unit.id === selected.id)?.name ?? selected.id));
+      invalid.forEach(selected => setUnitProduction(selected.id, 0));
+    }
+  }, [data.loading, data.error, data.units, civ, age, mongolEconomy, units, setUnitProduction]);
+
+  useEffect(() => {
+    if (civ !== 'mo' || data.loading || data.error || !data.technologies.length) return;
+    activeTechs.forEach(id => {
+      const tech = data.technologies.find(t => t.baseId === id && t.civs.includes(civ));
+      if (!tech || (tech.age ?? 1) > age) toggleTech(id);
+    });
+  }, [data.loading, data.error, data.technologies, civ, age, activeTechs, toggleTech]);
 
   useEffect(() => {
     // Load state from URL on first mount
@@ -42,6 +61,11 @@ export const Calculator = () => {
       }
 
       if (state.activeTechs.length > 0) params.set('techs', state.activeTechs.join(','));
+      if (state.civ === 'mo') {
+        if (state.mongolEconomy.whiteStupa) params.set('ms', 'true');
+        if (state.mongolEconomy.steppeRedoubt) params.set('mr', 'true');
+        if (state.mongolEconomy.deerStones) params.set('md', 'true');
+      }
       if (state.ovooCount > 0) params.set('oc', state.ovooCount.toString());
       if (state.ovooDoubleProduction) params.set('od', 'true');
       if (state.sacredSites > 0) params.set('ss', state.sacredSites.toString());
@@ -89,6 +113,7 @@ export const Calculator = () => {
       </header>
 
       <CivSelector />
+      {removedUnits.length > 0 && <p role="status" className="text-sm text-amber-800 bg-amber-50 p-3 rounded">Unavailable selections removed: {removedUnits.join(', ')}. Choose an available unit; researched veterancy is not assumed.</p>}
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pb-2">
         <ModeToggle />
