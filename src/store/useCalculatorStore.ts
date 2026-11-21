@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getMountedVillagerLimit, getTributaryCount, normalizeMountedVillagers, type MongolEconomy } from '../utils/calculator';
+import { getMountedVillagerLimit, getPagodaForestCount, getTributaryCount, normalizeMountedVillagers, type MongolEconomy } from '../utils/calculator';
 
 export interface VillagerAllocation {
   food_sheep: number;
@@ -32,6 +32,7 @@ interface CalculatorState {
   mountedVillagers: VillagerAllocation;
   villagerType: 'regular' | 'mounted';
   tributaryFoodRate: number;
+  pagodaForests: number; // For Jin Dynasty (Small Pagoda Forests, Age IV, 0-15)
   activeTechs: string[];
   units: ProductionUnit[];
   ovooCount: number; // For Mongols/Golden Horde
@@ -51,6 +52,7 @@ interface CalculatorState {
   setMountedVillagers: (type: keyof VillagerAllocation, count: number) => void;
   setVillagerType: (type: 'regular' | 'mounted') => void;
   setTributaryFoodRate: (rate: number) => void;
+  setPagodaForests: (count: number) => void;
   toggleTech: (techId: string) => void;
   setUnitProduction: (id: string, buildings: number) => void;
   toggleDoubleProduction: (id: string) => void;
@@ -85,6 +87,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   mountedVillagers: normalizeMountedVillagers({}, 1),
   villagerType: 'regular',
   tributaryFoodRate: 0,
+  pagodaForests: 0,
   activeTechs: [],
   units: [],
   ovooCount: 0,
@@ -96,11 +99,12 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   tcProducingVillagers: 1, // Default: 1 TC producing villagers (starting TC)
 
   setMode: (mode) => set({ mode }),
-  setCiv: (civ) => set((state) => ({ civ, mongolEconomy: {}, villagers: civ === 'mo' ? { ...state.villagers, food_farms: 0, stone: 0 } : state.villagers, activeTechs: [], units: [], sacredSites: 0, relics: 0, ovooCount: 0, ovooDoubleProduction: false, tributaries: 0, mountedVillagers: normalizeMountedVillagers({}, 1), villagerType: 'regular', tributaryFoodRate: 0 })), // Reset on civ change
+  setCiv: (civ) => set((state) => ({ civ, mongolEconomy: {}, villagers: civ === 'mo' ? { ...state.villagers, food_farms: 0, stone: 0 } : state.villagers, activeTechs: [], units: [], sacredSites: 0, relics: 0, ovooCount: 0, ovooDoubleProduction: false, tributaries: 0, pagodaForests: 0, mountedVillagers: normalizeMountedVillagers({}, 1), villagerType: 'regular', tributaryFoodRate: 0 })), // Reset on civ change
   setAge: (age) => set((state) => {
-    const tributaries = getTributaryCount(state.civ, age, state.tributaries);
     age = Math.max(1, Math.min(4, Math.floor(age) || 1));
-    return { age, mongolEconomy: normalizeMongolEconomy(state.civ, age, state.mongolEconomy), tributaries, mountedVillagers: normalizeMountedVillagers(state.mountedVillagers, age, tributaries) };
+    const tributaries = getTributaryCount(state.civ, age, state.tributaries);
+    const pagodaForests = getPagodaForestCount(state.civ, age, state.pagodaForests);
+    return { age, mongolEconomy: normalizeMongolEconomy(state.civ, age, state.mongolEconomy), tributaries, pagodaForests, mountedVillagers: normalizeMountedVillagers(state.mountedVillagers, age, tributaries) };
   }),
   setMongolEconomy: (options) => set((state) => ({ mongolEconomy: normalizeMongolEconomy(state.civ, state.age, { ...state.mongolEconomy, ...options }) })),
   setVillagers: (type, count) =>
@@ -117,6 +121,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
   }),
   setVillagerType: (villagerType) => set((state) => ({ villagerType: state.civ === 'jin' ? villagerType : 'regular' })),
   setTributaryFoodRate: (rate) => set({ tributaryFoodRate: Number.isFinite(rate) ? Math.max(0, rate) : 0 }),
+  setPagodaForests: (count) => set((state) => ({ pagodaForests: getPagodaForestCount(state.civ, state.age, count) })),
   toggleTech: (techId) =>
     set((state) => ({
       activeTechs: state.activeTechs.includes(techId)
@@ -170,6 +175,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
       const sacredSites = Math.max(0, Math.min(3, parseInt(params.get('ss') || '0', 10) || 0));
       const relics = Math.max(0, Math.min(5, parseInt(params.get('rl') || '0', 10) || 0));
       const tributaries = getTributaryCount(civ, age, Number(params.get('tb') || 0));
+      const pagodaForests = getPagodaForestCount(civ, age, Number(params.get('pf') || 0));
       const rawTributaryFoodRate = Number(params.get('tfr') || 0);
       const tributaryFoodRate = civ === 'jin' && Number.isFinite(rawTributaryFoodRate)
         ? Math.max(0, rawTributaryFoodRate) : 0;
@@ -198,7 +204,7 @@ export const useCalculatorStore = create<CalculatorState>((set) => ({
           })
         : [];
 
-      set({ mode, civ, age, mongolEconomy, villagers, mountedVillagers, villagerType, tributaryFoodRate, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, relics, tributaries, tcProducingVillagers });
+      set({ mode, civ, age, mongolEconomy, villagers, mountedVillagers, villagerType, tributaryFoodRate, pagodaForests, activeTechs: techs, units, ovooCount, ovooDoubleProduction, sacredSites, relics, tributaries, tcProducingVillagers });
     } catch (e) {
       if (import.meta.env.DEV) console.error("Failed to parse URL params", e);
     }

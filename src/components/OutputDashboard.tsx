@@ -27,8 +27,8 @@ export const OutputDashboard = () => {
 // ── Resource Mode: show RPM + max sustainable production ──
 
 export const RpmBar = () => {
-  const { villagers, mountedVillagers, tributaryFoodRate, tributaries, civ, age, activeTechs, ovooCount, sacredSites, relics, mongolEconomy } = useCalculatorStore();
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics, mongolEconomy);
+  const { villagers, mountedVillagers, tributaryFoodRate, tributaries, pagodaForests, civ, age, activeTechs, ovooCount, sacredSites, relics, mongolEconomy } = useCalculatorStore();
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate, pagodaForests }, relics, mongolEconomy);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
@@ -53,9 +53,9 @@ export const RpmBar = () => {
 };
 
 export const MaxProductionGrid = () => {
-  const { villagers, mountedVillagers, tributaryFoodRate, tributaries, villagerType, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, relics, mongolEconomy } = useCalculatorStore();
+  const { villagers, mountedVillagers, tributaryFoodRate, tributaries, pagodaForests, villagerType, civ, age, activeTechs, ovooCount, ovooDoubleProduction, sacredSites, relics, mongolEconomy } = useCalculatorStore();
   const { units: allUnits } = useAoE4Data();
-  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics, mongolEconomy);
+  const rpm = calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate, pagodaForests }, relics, mongolEconomy);
 
   const availableUnits = Object.values(
     allUnits
@@ -137,13 +137,13 @@ export const MaxProductionGrid = () => {
 // ── Units Mode: show required villagers for desired production ──
 
 export const RequiredVillagersBar = () => {
-  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, relics, tcProducingVillagers, tributaries, villagerType, tributaryFoodRate, mongolEconomy } = useCalculatorStore();
+  const { civ, age, activeTechs, units: activeUnits, ovooCount, sacredSites, relics, tcProducingVillagers, tributaries, pagodaForests, villagerType, tributaryFoodRate, mongolEconomy } = useCalculatorStore();
   const { units: allUnits, loading, error } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
     ovooCount, sacredSites,
-    tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate }, relics, mongolEconomy
+    tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate, pagodaForests }, relics, mongolEconomy
   );
   if (loading || error) return <p className="text-sm text-slate-500">{error ? 'Unit data unavailable.' : 'Loading unit data...'}</p>;
   if (required.missingTimeUnits.length > 0) return <ProductionUnavailable ids={required.missingTimeUnits} units={allUnits} civ={civ} />;
@@ -242,14 +242,14 @@ const UnitsModeOutput = () => {
     civ, age, activeTechs,
     units: activeUnits,
     ovooCount, ovooDoubleProduction, sacredSites, relics,
-    tcProducingVillagers, villagers, villagerType, tributaries, tributaryFoodRate, mongolEconomy
+    tcProducingVillagers, villagers, villagerType, tributaries, tributaryFoodRate, pagodaForests, mongolEconomy
   } = useCalculatorStore();
   const { units: allUnits, loading, error } = useAoE4Data();
 
   const required = calculateRequiredVillagers(
     activeUnits, allUnits, civ, age, activeTechs,
     ovooCount, sacredSites,
-    tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate }, relics, mongolEconomy
+    tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate, pagodaForests }, relics, mongolEconomy
   );
 
   const { total: unitDrain } = calculateProductionDrain(activeUnits, allUnits, civ, mongolEconomy, activeTechs);
@@ -263,7 +263,7 @@ const UnitsModeOutput = () => {
     oliveoil: 0,
     silver: 0
   };
-  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { tributaryFoodRate }, relics, mongolEconomy);
+  const rpm = calculateRPM(requiredVillagersAllocation, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { tributaryFoodRate, pagodaForests }, relics, mongolEconomy);
   const villagerAnalysis = calculateVillagerProduction(rpm, tcProducingVillagers, unitDrain, allUnits, civ, villagerType);
   if (loading || error) return <p className="text-sm text-slate-500">{error ? 'Unit data unavailable.' : 'Loading unit data...'}</p>;
   if (required.missingTimeUnits.length > 0) return null;

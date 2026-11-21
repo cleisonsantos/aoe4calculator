@@ -1,14 +1,15 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { CopyPlus, Trophy, Church } from 'lucide-react';
-import { TRIBUTARY_MIN_AGE } from '../utils/calculator';
+import { PAGODA_FOREST_MAX_COUNT, PAGODA_FOREST_MIN_AGE, PAGODA_FOREST_WOOD_RATE, TRIBUTARY_MIN_AGE } from '../utils/calculator';
 
 const STONE_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/stone.png';
 const GOLD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/gold.png';
 const FOOD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/food.png';
+const WOOD_ICON = 'https://raw.githubusercontent.com/aoe4world/explorer/main/assets/resources/wood.png';
 
 export const PassiveGenerationSelector = () => {
-  const { civ, age, mode, ovooCount, ovooDoubleProduction, sacredSites, relics, setRelics, tributaries, tributaryFoodRate, setTributaryFoodRate, setOvoo, setSacredSites, setTributaries, mongolEconomy, setMongolEconomy } = useCalculatorStore();
+  const { civ, age, mode, ovooCount, ovooDoubleProduction, sacredSites, relics, setRelics, tributaries, tributaryFoodRate, setTributaryFoodRate, pagodaForests, setPagodaForests, setOvoo, setSacredSites, setTributaries, mongolEconomy, setMongolEconomy } = useCalculatorStore();
 
   const isMongolVariant = civ === 'mo' || civ === 'gol';
   const isJin = civ === 'jin';
@@ -162,6 +163,33 @@ export const PassiveGenerationSelector = () => {
                   className="block mt-2 w-28 p-2 border rounded bg-white"
                 />
               </label>
+
+              <div className="pt-4 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <img src={WOOD_ICON} alt="Wood" className="w-5 h-5 object-contain" />
+                    <span className="text-sm font-medium text-slate-700">Pagoda Forest</span>
+                  </div>
+                  <span className="text-xs font-mono text-slate-500">
+                    +{pagodaForests * PAGODA_FOREST_WOOD_RATE} wood/min
+                  </span>
+                </div>
+                <label className="block text-xs text-slate-600">
+                  Small Pagoda Forests (Age IV, 0–{PAGODA_FOREST_MAX_COUNT})
+                  <input
+                    type="number"
+                    min="0"
+                    max={PAGODA_FOREST_MAX_COUNT}
+                    disabled={age < PAGODA_FOREST_MIN_AGE}
+                    value={pagodaForests}
+                    onChange={(e) => setPagodaForests(Number(e.target.value))}
+                    className="block mt-2 w-28 p-2 border rounded bg-white"
+                  />
+                </label>
+                <p className="text-xs text-slate-500">
+                  Imperial landmark: spawns 1 every 30s (cap {PAGODA_FOREST_MAX_COUNT}), each generating 20 wood / 30s ({PAGODA_FOREST_WOOD_RATE} wood/min). Flower Pagoda, Mountain Hall, and Grassland situational effects are not modeled.
+                </p>
+              </div>
             </div>
           )}
         </div>

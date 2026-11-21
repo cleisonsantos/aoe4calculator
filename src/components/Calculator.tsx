@@ -27,7 +27,7 @@ export const Calculator = () => {
   }, [data.loading, data.error, data.units, civ, age, mongolEconomy, units, setUnitProduction]);
 
   useEffect(() => {
-    if (civ !== 'mo' || data.loading || data.error || !data.technologies.length) return;
+    if ((civ !== 'mo' && civ !== 'jin') || data.loading || data.error || !data.technologies.length) return;
     activeTechs.forEach(id => {
       const tech = data.technologies.find(t => t.baseId === id && t.civs.includes(civ));
       if (!tech || (tech.age ?? 1) > age) toggleTech(id);
@@ -58,6 +58,7 @@ export const Calculator = () => {
         if (state.villagerType === 'mounted') params.set('vt', 'mounted');
         if (state.tributaryFoodRate > 0) params.set('tfr', state.tributaryFoodRate.toString());
         if (state.tributaries > 0) params.set('tb', state.tributaries.toString());
+        if (state.pagodaForests > 0) params.set('pf', state.pagodaForests.toString());
       }
 
       if (state.activeTechs.length > 0) params.set('techs', state.activeTechs.join(','));

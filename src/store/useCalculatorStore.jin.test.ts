@@ -83,10 +83,33 @@ describe('Jin state and URL', () => {
   });
 
   it('sanitizes malformed mounted inputs', () => {
-    store().loadFromUrl('?civ=jin&age=3&tb=NaN&tfr=Infinity&mv_wood=Infinity&mv_gold=-5&mv_food_farms=nope');
+    store().loadFromUrl('?civ=jin&age=3&tb=NaN&tfr=Infinity&mv_wood=Infinity&mv_gold=-5&mv_food_farms=nope&pf=Infinity');
     expect(mountedTotal()).toBe(0);
     expect(store().tributaries).toBe(0);
+    expect(store().pagodaForests).toBe(0);
     store().setTributaryFoodRate(Infinity);
     expect(store().tributaryFoodRate).toBe(0);
+  });
+
+  it('gates, clamps, persists, and resets Pagoda Forest counts', () => {
+    store().loadFromUrl('?civ=jin&age=3&pf=10');
+    expect(store().pagodaForests).toBe(0);
+    store().setPagodaForests(10);
+    expect(store().pagodaForests).toBe(0);
+
+    store().loadFromUrl('?civ=jin&age=4&pf=25');
+    expect(store().pagodaForests).toBe(15);
+    store().setPagodaForests(6);
+    expect(store().pagodaForests).toBe(6);
+
+    store().setAge(3);
+    expect(store().pagodaForests).toBe(0);
+
+    store().setAge(4);
+    store().setPagodaForests(8);
+    store().setCiv('en');
+    expect(store().pagodaForests).toBe(0);
+    store().setPagodaForests(5);
+    expect(store().pagodaForests).toBe(0);
   });
 });
