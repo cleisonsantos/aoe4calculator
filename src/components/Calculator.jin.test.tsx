@@ -85,15 +85,24 @@ describe('Jin UI integration', () => {
     expect(html).toContain('35s each');
   });
 
-  it('disables early tributary controls and limits their inputs to Jin', () => {
+  it('disables early tributary and pagoda forest controls and limits their inputs to Jin', () => {
     const jin = renderToStaticMarkup(<PassiveGenerationSelector />);
     expect(jin).toContain('Tributary States');
     expect(jin).toContain('Food/min per state (user-provided)');
-    expect((jin.match(/disabled=""/g) ?? []).length).toBe(5);
+    expect(jin).toContain('Pagoda Forest');
+    expect(jin).toContain('Small Pagoda Forests (Age IV, 0–15)');
+    expect((jin.match(/disabled=""/g) ?? []).length).toBe(6);
     useCalculatorStore.getState().setCiv('en');
     const english = renderToStaticMarkup(<PassiveGenerationSelector />);
     expect(english).not.toContain('Tributary States');
     expect(english).not.toContain('Food/min per state');
+    expect(english).not.toContain('Pagoda Forest');
+  });
+
+  it('includes Pagoda Forest passive wood in Resource Mode income', () => {
+    useCalculatorStore.getState().loadFromUrl('?civ=jin&age=4&mode=resource&food_sheep=0&pf=5');
+    const html = renderToStaticMarkup(<RpmBar />);
+    expect(html).toContain('+200');
   });
 
   it('renders separate worker inputs and disclosed estimates only for Jin', () => {

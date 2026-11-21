@@ -6,7 +6,7 @@ import { CostDisplay } from './ResourceIcon';
 import { Home, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 export const TownCenterSelector = () => {
-  const { tcProducingVillagers, setTcProducingVillagers, age, mode, civ, villagers, activeTechs, mountedVillagers, villagerType, setVillagerType, tributaries, tributaryFoodRate, ovooCount, sacredSites, relics, mongolEconomy, units: activeUnits } = useCalculatorStore();
+  const { tcProducingVillagers, setTcProducingVillagers, age, mode, civ, villagers, activeTechs, mountedVillagers, villagerType, setVillagerType, tributaries, tributaryFoodRate, pagodaForests, ovooCount, sacredSites, relics, mongolEconomy, units: activeUnits } = useCalculatorStore();
   const { units: allUnits, buildings = [] } = useAoE4Data();
   const townCenter = buildings.find(b => b.baseId === 'town-center' && b.civs.includes('mo'));
   const pasture = buildings.find(b => b.baseId === 'pasture' && b.civs.includes('mo'));
@@ -25,7 +25,7 @@ export const TownCenterSelector = () => {
   const totalFoodDrain = tcProducingVillagers * foodDrainPerTc;
 
   const rpm = (allUnits?.length && civ)
-    ? calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate }, relics, mongolEconomy)
+    ? calculateRPM(villagers, civ, age, activeTechs, ovooCount, sacredSites, tributaries, { mountedVillagers, tributaryFoodRate, pagodaForests }, relics, mongolEconomy)
     : { food: 0, wood: 0, gold: 0, stone: 0, oliveoil: 0, silver: 0 };
 
   const currentFoodRpm = rpm.food;
@@ -36,7 +36,7 @@ export const TownCenterSelector = () => {
     : { food: 40, wood: 40, gold: 40, stone: 40, oliveoil: 40, silver: 40 };
   const suggestedFoodVills = totalFoodDrain > 0 ? Math.ceil(totalFoodDrain / effRates.food) : 0;
   const production = calculateProductionDrain(activeUnits, allUnits, civ, mongolEconomy, activeTechs);
-  const required = calculateRequiredVillagers(activeUnits, allUnits, civ, age, activeTechs, ovooCount, sacredSites, tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate }, relics, mongolEconomy);
+  const required = calculateRequiredVillagers(activeUnits, allUnits, civ, age, activeTechs, ovooCount, sacredSites, tcProducingVillagers, tributaries, { villagerType, tributaryFoodRate, pagodaForests }, relics, mongolEconomy);
   const analysis = calculateVillagerProduction(rpm, tcProducingVillagers, production.total, allUnits, civ, villagerType);
   const sustainable = analysis.canProduceSimultaneously && required.stoneDeficit <= 0 && production.missingTimeUnits.length === 0 && (civ !== 'mo' || rpm.wood >= production.total.wood);
   const maxTcSupported = analysis.maxTcForCurrentFood;

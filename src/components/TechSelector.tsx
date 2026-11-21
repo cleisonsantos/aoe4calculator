@@ -20,19 +20,27 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
   const getTechForCiv = (baseId: string) => {
     const matches = techs.filter(t => t.baseId === baseId);
     const exact = matches.find(t => t.civs.includes(civ));
-    return civ === 'mo' ? exact : exact || matches[0];
+    return civ === 'mo' || civ === 'jin' ? exact : exact || matches[0];
   };
 
-  const renderTechTier = (title: string, techIds: string[]) => (
+  const renderTechTier = (title: string, techIds: string[]) => {
+    const visibleTechs = techIds
+      .map(id => ({ id, tech: getTechForCiv(id) }))
+      .filter(({ id, tech }) => {
+        if (!tech) return false;
+        const isActive = activeTechs.includes(id);
+        if (civ === 'mo' && (tech.age > age || (id.endsWith('-improved') && !influence && !isActive))) return false;
+        if (civ === 'jin' && tech.age > age) return false;
+        return true;
+      });
+    if (visibleTechs.length === 0) return null;
+
+    return (
     <div className="mb-4 last:mb-0">
       <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">{title}</h4>
       <div className="flex flex-wrap gap-2">
-        {techIds.map(id => {
-          const tech = getTechForCiv(id);
-          if (!tech) return null;
-
+        {visibleTechs.map(({ id, tech }) => {
           const isActive = activeTechs.includes(id);
-          if (civ === 'mo' && (tech.age > age || (id.endsWith('-improved') && !influence && !isActive))) return null;
 
           return (
               <button
@@ -60,7 +68,8 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
         })}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 w-full">
@@ -89,15 +98,18 @@ export const TechSelector = ({ techs }: { techs: any[] }) => {
       
       {!isCollapsed && (
         <div className="mt-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
-          {renderTechTier('Core & Age 1', CORE_ECO_TECHS.tier1)}
-          {renderTechTier('Ovoo Improved (Age 1)', CORE_ECO_TECHS.improved_tier1)}
-          {renderTechTier('Age 2 Upgrades', CORE_ECO_TECHS.tier2)}
-          {renderTechTier('Ovoo Improved (Age 2)', CORE_ECO_TECHS.improved_tier2)}
-          {renderTechTier('Age 3 Upgrades', CORE_ECO_TECHS.tier3)}
-          {renderTechTier('Age 4 Upgrades', civ === 'mo' ? ['crosscut-saw', 'precision-cross-breeding', 'cupellation'] : CORE_ECO_TECHS.tier4)}
+          {renderTechTier('Core & Age 1', civ === 'jin' ? ['wheelbarrow', 'forestry', 'mohe-ancestry'] : CORE_ECO_TECHS.tier1)}
+          {civ !== 'jin' && renderTechTier('Ovoo Improved (Age 1)', CORE_ECO_TECHS.improved_tier1)}
+          {renderTechTier('Age 2 Upgrades', civ === 'jin' ? ['double-broadax', 'horticulture', 'specialized-pick', 'hunting-tradition'] : CORE_ECO_TECHS.tier2)}
+          {civ !== 'jin' && renderTechTier('Ovoo Improved (Age 2)', CORE_ECO_TECHS.improved_tier2)}
+          {renderTechTier('Age 3 Upgrades', civ === 'jin' ? ['lumber-preservation', 'draft-horses', 'fertilization', 'shaft-mining'] : CORE_ECO_TECHS.tier3)}
+          {renderTechTier('Age 4 Upgrades', civ === 'mo' || civ === 'jin' ? ['crosscut-saw', 'precision-cross-breeding', 'cupellation'] : CORE_ECO_TECHS.tier4)}
           {civ === 'mo' && renderTechTier('Production & Relics', ['military-academy', 'military-academy-improved', 'tithe-barns', 'tithe-barns-improved'])}
+          {civ === 'jin' && renderTechTier('Production & Relics', ['military-academy', 'tithe-barns'])}
           {civ === 'mo' && <p className="text-xs text-amber-700">Military Academy uses the API description (+33%/+53% production speed); structured API effects disagree, so this is an estimate pending in-game verification.</p>}
           {civ === 'mo' && <p className="text-xs text-slate-500">Improved research requires Ovoo or White Stupa influence. Researched upgrades remain active after influence is lost. Monastic Shrines influence is not modeled. Normal and improved versions replace one another. Wheelbarrow and Forestry logistical effects are not modeled as exact flat gather bonuses.</p>}
+          {civ === 'jin' && <p className="text-xs text-amber-700">Military Academy uses the API description (+33% production speed); structured API effects disagree, so this is an estimate pending in-game verification.</p>}
+          {civ === 'jin' && <p className="text-xs text-slate-500">Wheelbarrow, Forestry, and Draft Horses carry/movement/chopping effects are not modeled as flat gather bonuses. Food gather upgrades (+10% each) do not apply to hunted meat or fishing boats; Mohe Ancestry and Hunting Tradition (+20% each) apply only to deer and boar.</p>}
         </div>
       )}
     </div>

@@ -33,12 +33,15 @@ const mongolStoneIncome = (age: number, count = 0, mongol: MongolEconomy = {}) =
   (Number.isFinite(count) && count >= 1 ? MONGOL_OVOO_STONE_RATES[Math.max(1, Math.min(4, age))] : 0) +
   (age === 4 && mongol.whiteStupa ? WHITE_STUPA_STONE_RATE : 0);
 
-const mongolTithe = (techs: string[], relics: number) => {
-  const improved = hasTech(techs, 'tithe-barns-improved');
+const titheBarnsIncome = (techs: string[], relics: number, allowImproved: boolean) => {
+  const safeRelics = Number.isFinite(relics) ? Math.max(0, relics) : 0;
+  const improved = allowImproved && hasTech(techs, 'tithe-barns-improved');
   const enabled = improved || hasTech(techs, 'tithe-barns');
-  return { food: enabled ? relics * (improved ? 60 : 40) : 0,
-    wood: enabled ? relics * (improved ? 60 : 40) : 0,
-    stone: enabled ? relics * (improved ? 15 : 10) : 0 };
+  return {
+    food: enabled ? safeRelics * (improved ? 60 : 40) : 0,
+    wood: enabled ? safeRelics * (improved ? 60 : 40) : 0,
+    stone: enabled ? safeRelics * (improved ? 15 : 10) : 0,
+  };
 };
 
 export const getDoubleProductionStoneCost = (u: UnitData, mongol: MongolEconomy = {}) =>
@@ -66,11 +69,12 @@ export const calculateBuildingTradeoff = (
   return { pastures, remainingWood: budget - pastures * cost };
 };
 
-const mongolProductionSpeed = (u: UnitData, techs: string[]) => {
+const getProductionSpeed = (u: UnitData, civ: string, techs: string[]) => {
+  if (civ !== 'mo' && civ !== 'jin') return 1;
   if (!u.classes?.some(c => ['infantry', 'cavalry', 'siege', 'transport'].includes(c)) ||
       u.classes.some(c => ['religious', 'support'].includes(c))) return 1;
-  return hasTech(techs, 'military-academy-improved') ? IMPROVED_MILITARY_ACADEMY_SPEED :
-    hasTech(techs, 'military-academy') ? MILITARY_ACADEMY_SPEED : 1;
+  if (civ === 'mo' && hasTech(techs, 'military-academy-improved')) return IMPROVED_MILITARY_ACADEMY_SPEED;
+  return hasTech(techs, 'military-academy') ? MILITARY_ACADEMY_SPEED : 1;
 };
 
 // ── Villager Unit Helper ──
@@ -85,11 +89,39 @@ export interface JinEconomy {
   mountedVillagers?: Partial<VillagerAllocation>;
   villagerType?: 'regular' | 'mounted';
   tributaryFoodRate?: number;
+  pagodaForests?: number;
 }
 // Live API mounted-villager-1 description; Emissaries unlock in Age III.
 export const MOUNTED_VILLAGER_BASE_LIMIT = 20;
 export const MOUNTED_VILLAGERS_PER_TRIBUTARY = 3;
 export const TRIBUTARY_MIN_AGE = 3;
+// Live API pagoda-forest-3 description: Imperial landmark (Age IV), cap 15, 20 Wood / 30s = 40 Wood/min.
+export const PAGODA_FOREST_MIN_AGE = 4;
+export const PAGODA_FOREST_MAX_COUNT = 15;
+export const PAGODA_FOREST_WOOD_RATE = 40;
+// Live API Jin technology descriptions (data.aoe4world.com/technologies/all.json).
+const JIN_FOOD_TECH_MULT = 1.10;
+const JIN_HUNT_TECH_MULT = 1.20;
+const JIN_WOOD_TECH_MULT = 1.15;
+const JIN_MINING_TECH_MULT = 1.15;
+
+const jinTechsAtAge = (techs: string[], age: number) => {
+  const minimumAges: Record<string, number> = {
+    wheelbarrow: 1, forestry: 1, 'mohe-ancestry': 1,
+    horticulture: 2, 'double-broadax': 2, 'specialized-pick': 2, 'hunting-tradition': 2,
+    fertilization: 3, 'lumber-preservation': 3, 'draft-horses': 3, 'shaft-mining': 3, 'military-academy': 3,
+    'precision-cross-breeding': 4, 'crosscut-saw': 4, cupellation: 4, 'tithe-barns': 4,
+  };
+  return techs.filter(t => age >= (minimumAges[t.replace(/-\d+$/, '')] ?? 1));
+};
+
+export const getPagodaForestCount = (civ: string, age: number, count = 0) =>
+  civ === 'jin' && age >= PAGODA_FOREST_MIN_AGE && age <= 4 && Number.isFinite(count)
+    ? Math.max(0, Math.min(PAGODA_FOREST_MAX_COUNT, Math.floor(count)))
+    : 0;
+
+const getPagodaForestWood = (civ: string, age: number, count = 0) =>
+  getPagodaForestCount(civ, age, count) * PAGODA_FOREST_WOOD_RATE;
 
 export const getTributaryCount = (civ: string, age: number, count = 0) =>
   civ === 'jin' && age >= TRIBUTARY_MIN_AGE && age <= 4 && Number.isFinite(count)
@@ -213,6 +245,25 @@ export const getResourceMultipliers = (
     return { food_mult: food, wood_mult: wood, gold_mult: gold, stone_mult: 0,
       oliveoil_mult: 1, silver_mult: 1 };
   }
+  if (civ === 'jin') {
+    activeTechs = jinTechsAtAge(activeTechs, age);
+    const food =
+      (hasTech(activeTechs, 'horticulture') ? JIN_FOOD_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'fertilization') ? JIN_FOOD_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'precision-cross-breeding') ? JIN_FOOD_TECH_MULT : 1);
+    const wood =
+      (hasTech(activeTechs, 'double-broadax') ? JIN_WOOD_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'lumber-preservation') ? JIN_WOOD_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'draft-horses') ? JIN_WOOD_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'crosscut-saw') ? JIN_WOOD_TECH_MULT : 1);
+    const mining =
+      (hasTech(activeTechs, 'specialized-pick') ? JIN_MINING_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'shaft-mining') ? JIN_MINING_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'cupellation') ? JIN_MINING_TECH_MULT : 1);
+    // Carry capacity, movement and tree-felling bonuses are not raw gather-rate multipliers.
+    return { food_mult: food, wood_mult: wood, gold_mult: mining, stone_mult: mining,
+      oliveoil_mult: 1, silver_mult: 1 };
+  }
   let wood_mult = 1.0;
   let gold_mult = 1.0;
   let stone_mult = 1.0;
@@ -247,7 +298,7 @@ export const getResourceMultipliers = (
   if (activeTechs.includes('horticulture')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
   if (activeTechs.includes('horticulture-improved')) food_mult *= 1.30;
   if (activeTechs.includes('fertilization')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
-  if (activeTechs.includes('cross-breeding')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
+  if (activeTechs.includes('cross-breeding') || activeTechs.includes('precision-cross-breeding')) { food_mult *= 1.15; oliveoil_mult *= 1.15; }
 
   if (activeTechs.includes('double-broadax')) wood_mult *= 1.15;
   if (activeTechs.includes('double-broadax-improved')) wood_mult *= 1.35;
@@ -256,7 +307,7 @@ export const getResourceMultipliers = (
 
   if (activeTechs.includes('specialized-pick')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
   if (activeTechs.includes('specialized-pick-improved')) { gold_mult *= 1.35; stone_mult *= 1.35; silver_mult *= 1.35; }
-  if (activeTechs.includes('acid-distillation')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
+  if (activeTechs.includes('shaft-mining') || activeTechs.includes('acid-distillation')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
   if (activeTechs.includes('cupellation')) { gold_mult *= 1.15; stone_mult *= 1.15; silver_mult *= 1.15; }
 
   return { food_mult, wood_mult, gold_mult, stone_mult, oliveoil_mult, silver_mult };
@@ -375,7 +426,7 @@ export const calculateRPM = (
       (villagers.food_deep_fish ?? 0) * BASE_RATES.food_deep_fish;
     stone_with_techs = 0;
     if (age >= 3 && mongol.steppeRedoubt) gold_with_techs *= STEPPE_REDOUBT_GOLD_MULTIPLIER;
-    const tithe = mongolTithe(activeTechs, Math.max(0, relics));
+    const tithe = titheBarnsIncome(activeTechs, relics, true);
     rpm.food += tithe.food;
     rpm.wood += tithe.wood;
     rpm.stone += tithe.stone + mongolStoneIncome(age, ovooCount, mongol);
@@ -393,20 +444,39 @@ export const calculateRPM = (
 
   // Mounted counts are additional workers, not a bonus on every Jin villager.
   if (civ === 'jin') {
+    activeTechs = jinTechsAtAge(activeTechs, age);
+    const huntMultiplier =
+      (hasTech(activeTechs, 'mohe-ancestry') ? JIN_HUNT_TECH_MULT : 1) *
+      (hasTech(activeTechs, 'hunting-tradition') ? JIN_HUNT_TECH_MULT : 1);
+    const regularHunt = villagers.food_deer * BASE_RATES.food_deer + villagers.food_boar * BASE_RATES.food_boar;
+    const regularNonHunt =
+      villagers.food_sheep * BASE_RATES.food_sheep +
+      villagers.food_berries * BASE_RATES.food_berries +
+      villagers.food_farms * BASE_RATES.food_farms +
+      (villagers.food_fish ?? 0) * BASE_RATES.food_fish;
     const mounted = normalizeMountedVillagers(jin.mountedVillagers, age, tributaries);
-    const mountedFood =
+    const mountedHunt =
+      (mounted.food_deer * BASE_RATES.food_deer + mounted.food_boar * BASE_RATES.food_boar) *
+      MOUNTED_VILLAGER_GATHER_MULT;
+    const mountedNonHunt =
       (mounted.food_sheep * BASE_RATES.food_sheep +
         mounted.food_berries * BASE_RATES.food_berries +
-        mounted.food_deer * BASE_RATES.food_deer +
-        mounted.food_boar * BASE_RATES.food_boar) * MOUNTED_VILLAGER_GATHER_MULT +
+        mounted.food_fish * BASE_RATES.food_fish) * MOUNTED_VILLAGER_GATHER_MULT +
       mounted.food_farms * BASE_RATES.food_farms * MOUNTED_VILLAGER_FARM_MULT;
-    // Shore fishing uses workers; deep-sea fishing uses boats, never mounted workers.
-    food_with_techs += (mountedFood + mounted.food_fish * BASE_RATES.food_fish * MOUNTED_VILLAGER_GATHER_MULT) * m.food_mult;
+    // Food techs apply to non-hunt villagers; hunt techs apply to deer/boar; deep-sea uses boats.
+    food_with_techs =
+      (regularHunt + mountedHunt) * huntMultiplier +
+      (regularNonHunt + mountedNonHunt) * m.food_mult +
+      (villagers.food_deep_fish ?? 0) * BASE_RATES.food_deep_fish;
     wood_with_techs += mounted.wood * BASE_RATES.wood * MOUNTED_VILLAGER_GATHER_MULT * m.wood_mult;
     gold_with_techs += mounted.gold * BASE_RATES.gold * MOUNTED_VILLAGER_GATHER_MULT * m.gold_mult;
     stone_with_techs += mounted.stone * BASE_RATES.stone * MOUNTED_VILLAGER_GATHER_MULT * m.stone_mult;
     oliveoil_with_techs += mounted.oliveoil * BASE_RATES.oliveoil * MOUNTED_VILLAGER_GATHER_MULT * m.oliveoil_mult;
     silver_with_techs += mounted.silver * BASE_RATES.silver * MOUNTED_VILLAGER_GATHER_MULT * m.silver_mult;
+    const tithe = titheBarnsIncome(activeTechs, relics, false);
+    rpm.food += tithe.food;
+    rpm.wood += tithe.wood + getPagodaForestWood(civ, age, jin.pagodaForests);
+    rpm.stone += tithe.stone;
   }
 
   rpm.food += food_with_techs;
@@ -464,7 +534,7 @@ export const calculateProductionDrain = (
     if (!uDef) return;
 
     const time = typeof uDef.costs.time === 'number'
-      ? uDef.costs.time / (civ === 'mo' ? mongolProductionSpeed(uDef, activeTechs) : 1)
+      ? uDef.costs.time / getProductionSpeed(uDef, civ, activeTechs)
       : undefined;
     if (typeof time !== 'number' || !Number.isFinite(time) || time <= 0) {
       missingTimeUnits.push(uDef.id);
@@ -575,6 +645,7 @@ export const calculateRequiredVillagers = (
   mongol: MongolEconomy = {}
 ): RequiredVillagers => {
   if (civ === 'mo') activeTechs = mongolTechsAtAge(activeTechs, age);
+  if (civ === 'jin') activeTechs = jinTechsAtAge(activeTechs, age);
   const { total: drain, missingTimeUnits } = calculateProductionDrain(activeUnits, allUnits, civ,
     { ...mongol, whiteStupa: age === 4 && mongol.whiteStupa }, activeTechs);
   const rates = getEffectiveRates(civ, age, activeTechs, mongol);
@@ -610,10 +681,16 @@ export const calculateRequiredVillagers = (
 
   let woodDrain = drain.wood;
   if (civ === 'mo') {
-    const tithe = mongolTithe(activeTechs, Math.max(0, relics));
+    const tithe = titheBarnsIncome(activeTechs, relics, true);
     foodDrain = Math.max(0, foodDrain - tithe.food);
     woodDrain = Math.max(0, woodDrain - tithe.wood);
     stoneDrain = Math.max(0, stoneDrain - mongolStoneIncome(age, ovooCount, mongol) - tithe.stone);
+  }
+  if (civ === 'jin') {
+    const tithe = titheBarnsIncome(activeTechs, relics, false);
+    foodDrain = Math.max(0, foodDrain - tithe.food);
+    woodDrain = Math.max(0, woodDrain - tithe.wood - getPagodaForestWood(civ, age, jin.pagodaForests));
+    stoneDrain = Math.max(0, stoneDrain - tithe.stone);
   }
 
   const foodVills = rates.food > 0 ? Math.ceil(foodDrain / rates.food) : 0;
